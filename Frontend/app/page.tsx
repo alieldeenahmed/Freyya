@@ -1,5 +1,6 @@
 import Hero from "@/components/Hero";
 import ProductShowcase from "@/components/ProductShowcase";
+import BrandValues from "@/components/BrandValues";
 import { getProductById } from "@/lib/products";
 
 const SHOWCASE_IDS = ["golden-hour-serum", "dawn-cleanse", "second-skin-cream"];
@@ -14,6 +15,7 @@ export default function Home() {
           <ProductShowcase key={id} product={product} />
         ) : null;
       })}
+      <BrandValues />
     </>
   );
 }
