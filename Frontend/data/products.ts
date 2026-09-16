@@ -57,10 +57,10 @@ export const products: Product[] = [
     specs: ["Lip Balm", "4.5g", "4 shades"],
     color: "#B97572",
     variants: [
-      { id: "bare", name: "Bare", hex: "#D8A798", undertone: "neutral" },
-      { id: "petal", name: "Petal", hex: "#E8B4B8", undertone: "cool" },
-      { id: "rosewood", name: "Rosewood", hex: "#B97572", undertone: "cool" },
-      { id: "terracotta", name: "Terracotta", hex: "#C1694F", undertone: "warm" },
+      { id: "bare", name: "Bare", hex: "#D8A798", undertone: "neutral", intensity: "subtle" },
+      { id: "petal", name: "Petal", hex: "#E8B4B8", undertone: "cool", intensity: "subtle" },
+      { id: "rosewood", name: "Rosewood", hex: "#B97572", undertone: "cool", intensity: "bold" },
+      { id: "terracotta", name: "Terracotta", hex: "#C1694F", undertone: "warm", intensity: "bold" },
     ],
   },
   {
@@ -74,10 +74,10 @@ export const products: Product[] = [
     specs: ["Highlighter", "15ml", "4 shades"],
     color: "#D4B483",
     variants: [
-      { id: "moonlight", name: "Moonlight", hex: "#F0EAE2", undertone: "cool" },
-      { id: "champagne", name: "Champagne", hex: "#D4B483", undertone: "warm" },
-      { id: "rose-gold", name: "Rose Gold", hex: "#D9A996", undertone: "neutral" },
-      { id: "bronze", name: "Bronze", hex: "#A97452", undertone: "warm" },
+      { id: "moonlight", name: "Moonlight", hex: "#F0EAE2", undertone: "cool", intensity: "subtle" },
+      { id: "champagne", name: "Champagne", hex: "#D4B483", undertone: "warm", intensity: "subtle" },
+      { id: "rose-gold", name: "Rose Gold", hex: "#D9A996", undertone: "neutral", intensity: "bold" },
+      { id: "bronze", name: "Bronze", hex: "#A97452", undertone: "warm", intensity: "bold" },
     ],
   },
 ];

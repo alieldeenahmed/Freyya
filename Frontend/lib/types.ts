@@ -7,12 +7,14 @@ export type ProductCategory =
   | "Highlighter";
 
 export type Undertone = "cool" | "warm" | "neutral";
+export type Intensity = "subtle" | "bold";
 
 export interface ProductVariant {
   id: string;
   name: string;
   hex: string;
   undertone: Undertone;
+  intensity: Intensity;
 }
 
 export interface Product {
