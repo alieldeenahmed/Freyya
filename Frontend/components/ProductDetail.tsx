@@ -4,12 +4,41 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
+import { prefersReducedMotion } from "@/lib/motion";
+import { useCart } from "@/lib/cart-context";
 
 export default function ProductDetail({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
+  const [justAdded, setJustAdded] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const { addItem } = useCart();
 
   const activeColor = selectedVariant?.hex ?? product.color;
+
+  const handleAddToBag = () => {
+    addItem({
+      id: selectedVariant ? `${product.id}:${selectedVariant.id}` : product.id,
+      productId: product.id,
+      variantId: selectedVariant?.id,
+      name: product.name,
+      variantName: selectedVariant?.name,
+      price: product.price,
+      color: activeColor,
+    });
+
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1200);
+
+    const button = addButtonRef.current;
+    if (button && !prefersReducedMotion()) {
+      gsap.fromTo(
+        button,
+        { scale: 0.94 },
+        { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.5)" }
+      );
+    }
+  };
 
   useEffect(() => {
     const el = imageRef.current;
@@ -123,6 +152,15 @@ export default function ProductDetail({ product }: { product: Product }) {
               </div>
             </div>
           )}
+
+          <button
+            ref={addButtonRef}
+            type="button"
+            onClick={handleAddToBag}
+            className="mt-10 w-full border border-text py-3 text-sm uppercase tracking-widest text-text transition-colors hover:border-accent hover:text-accent sm:w-auto sm:px-10"
+          >
+            {justAdded ? "Added" : "Add to Bag"}
+          </button>
 
           <Link
             href="/shop"

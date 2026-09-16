@@ -1,4 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { gsap } from "@/lib/gsap";
+import { prefersReducedMotion } from "@/lib/motion";
+import { useCart } from "@/lib/cart-context";
 
 const navLinks = [
   { href: "/shop", label: "Shop" },
@@ -7,6 +13,26 @@ const navLinks = [
 ];
 
 export default function Header() {
+  const { itemCount, open } = useCart();
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const badge = badgeRef.current;
+    if (!badge || prefersReducedMotion()) return;
+
+    gsap.fromTo(
+      badge,
+      { scale: 1.6 },
+      { scale: 1, duration: 0.4, ease: "back.out(2)" }
+    );
+  }, [itemCount]);
+
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between border-b border-secondary/40 bg-base/90 px-6 py-5 backdrop-blur-sm sm:px-10">
       <Link href="/" className="font-serif text-2xl tracking-wide text-text">
@@ -26,6 +52,8 @@ export default function Header() {
       </nav>
 
       <button
+        type="button"
+        onClick={open}
         aria-label="Cart"
         className="relative text-text transition-colors hover:text-accent"
       >
@@ -40,9 +68,14 @@ export default function Header() {
           <path d="M5 7V5a5 5 0 0 1 10 0v2" />
           <rect x="1" y="7" width="18" height="14" rx="2" />
         </svg>
-        <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] leading-none text-base">
-          0
-        </span>
+        {itemCount > 0 && (
+          <span
+            ref={badgeRef}
+            className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] leading-none text-base"
+          >
+            {itemCount}
+          </span>
+        )}
       </button>
     </header>
   );
