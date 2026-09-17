@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
+import { useMagnetic } from "@/lib/useMagnetic";
 import { QUESTIONS, scoreQuiz, type Answers } from "@/lib/quiz";
 import { getProductById } from "@/lib/products";
 
@@ -11,7 +12,10 @@ export default function Quiz() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const stepRef = useRef<HTMLDivElement>(null);
+  const shopLinkRef = useRef<HTMLAnchorElement>(null);
   const isResult = step === QUESTIONS.length;
+
+  useMagnetic(shopLinkRef, 0.25);
 
   useEffect(() => {
     const el = stepRef.current;
@@ -100,6 +104,7 @@ export default function Quiz() {
               <p className="mt-2 text-text/70">{resultProduct.name}</p>
 
               <Link
+                ref={shopLinkRef}
                 href={`/shop/${resultProduct.id}`}
                 className="mt-10 inline-block border border-text px-8 py-3 text-sm uppercase tracking-widest text-text transition-colors hover:border-accent hover:text-accent"
               >

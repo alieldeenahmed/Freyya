@@ -25,18 +25,22 @@ export default function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/shop/${product.id}`} onClick={handleClick} className="group block">
-      <div
-        ref={imageRef}
-        className="aspect-[4/5] w-full"
-        style={{
-          background: `linear-gradient(160deg, ${product.color}, var(--color-base))`,
-        }}
-      />
+      <div className="aspect-[4/5] w-full overflow-hidden">
+        <div
+          ref={imageRef}
+          className="h-full w-full transition-transform duration-500 ease-out group-hover:scale-105"
+          style={{
+            background: `linear-gradient(160deg, ${product.color}, var(--color-base))`,
+          }}
+        />
+      </div>
       <div className="mt-4">
         <p className="text-xs uppercase tracking-widest text-text/50">
           {product.category}
         </p>
-        <h3 className="mt-1 font-serif text-xl text-text">{product.name}</h3>
+        <h3 className="mt-1 font-serif text-xl text-text transition-colors group-hover:text-accent">
+          {product.name}
+        </h3>
         <p className="mt-1 text-sm text-text/70">${product.price}</p>
       </div>
     </Link>

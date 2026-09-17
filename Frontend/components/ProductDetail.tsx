@@ -6,6 +6,7 @@ import type { Product } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
+import { useMagnetic } from "@/lib/useMagnetic";
 
 export default function ProductDetail({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
@@ -13,6 +14,8 @@ export default function ProductDetail({ product }: { product: Product }) {
   const imageRef = useRef<HTMLDivElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const { addItem } = useCart();
+
+  useMagnetic(addButtonRef, 0.25);
 
   const activeColor = selectedVariant?.hex ?? product.color;
 
@@ -132,7 +135,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                     type="button"
                     aria-label={variant.name}
                     onClick={() => setSelectedVariant(variant)}
-                    className="h-11 w-11 rounded-full border-2 transition-transform"
+                    className="h-11 w-11 rounded-full border-2 transition-transform hover:scale-110"
                     style={{
                       background: variant.hex,
                       borderColor:
@@ -142,7 +145,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                       transform:
                         selectedVariant?.id === variant.id
                           ? "scale(1.1)"
-                          : "scale(1)",
+                          : undefined,
                     }}
                   />
                 ))}
