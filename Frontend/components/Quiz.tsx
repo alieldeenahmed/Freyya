@@ -3,12 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { gsap } from "@/lib/gsap";
+import { prefersReducedMotion } from "@/lib/motion";
 import { QUESTIONS, scoreQuiz, type Answers } from "@/lib/quiz";
 import { getProductById } from "@/lib/products";
-
-function prefersReducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 export default function Quiz() {
   const [step, setStep] = useState(0);

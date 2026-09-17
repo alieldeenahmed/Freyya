@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
+import { prefersReducedMotion } from "@/lib/motion";
 
 const VALUES = [
   {
@@ -28,11 +29,7 @@ export default function BrandValues() {
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion()) return;
 
     const rows = rowRefs.current.filter((el): el is HTMLDivElement => !!el);
 

@@ -36,7 +36,7 @@ export default function CartDrawer() {
       />
       <div
         ref={panelRef}
-        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-sm translate-x-full flex-col bg-base px-6 py-6 sm:px-8"
+        className="fixed right-0 top-0 z-50 flex h-dvh w-full max-w-sm translate-x-full flex-col bg-base px-6 py-6 sm:px-8"
       >
         <div className="flex items-center justify-between border-b border-secondary/40 pb-4">
           <h2 className="font-serif text-2xl text-text">Your Bag</h2>
@@ -74,7 +74,7 @@ export default function CartDrawer() {
                       type="button"
                       onClick={() => updateQuantity(item.id, item.quantity - 1)}
                       aria-label="Decrease quantity"
-                      className="h-6 w-6 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent"
+                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent"
                     >
                       −
                     </button>
@@ -83,7 +83,7 @@ export default function CartDrawer() {
                       type="button"
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
                       aria-label="Increase quantity"
-                      className="h-6 w-6 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent"
+                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent"
                     >
                       +
                     </button>

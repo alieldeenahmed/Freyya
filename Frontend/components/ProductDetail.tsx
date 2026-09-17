@@ -50,10 +50,7 @@ export default function ProductDetail({ product }: { product: Product }) {
 
     sessionStorage.removeItem(key);
 
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion()) return;
 
     const rect = JSON.parse(stored) as {
       top: number;
@@ -135,7 +132,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                     type="button"
                     aria-label={variant.name}
                     onClick={() => setSelectedVariant(variant)}
-                    className="h-9 w-9 rounded-full border-2 transition-transform"
+                    className="h-11 w-11 rounded-full border-2 transition-transform"
                     style={{
                       background: variant.hex,
                       borderColor:

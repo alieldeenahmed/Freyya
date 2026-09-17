@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
+import { prefersReducedMotion } from "@/lib/motion";
 
 // Swap in a real asset later, e.g. "/hero.mp4" — falls back to a gradient until then.
 const HERO_VIDEO_SRC: string | null = null;
@@ -13,10 +14,10 @@ export default function Hero() {
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mql.matches);
+    const reduced = prefersReducedMotion();
+    setReducedMotion(reduced);
 
-    if (mql.matches) return;
+    if (reduced) return;
 
     const ctx = gsap.context(() => {
       gsap.from([headlineRef.current, taglineRef.current], {
@@ -33,7 +34,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative flex h-screen w-full items-end overflow-hidden bg-base">
+    <section className="relative flex h-dvh w-full items-end overflow-hidden bg-base">
       {HERO_VIDEO_SRC ? (
         <video
           className="absolute inset-0 h-full w-full object-cover"
