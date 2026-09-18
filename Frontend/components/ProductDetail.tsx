@@ -7,7 +7,6 @@ import type { Product } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
-import { useMagnetic } from "@/lib/useMagnetic";
 
 export default function ProductDetail({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
@@ -16,8 +15,6 @@ export default function ProductDetail({ product }: { product: Product }) {
   const textRef = useRef<HTMLDivElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const { addItem } = useCart();
-
-  useMagnetic(addButtonRef, 0.25);
 
   const activeColor = selectedVariant?.hex ?? product.color;
   const activeImage = selectedVariant?.image ?? product.image;
@@ -42,8 +39,8 @@ export default function ProductDetail({ product }: { product: Product }) {
     if (button && !prefersReducedMotion()) {
       gsap.fromTo(
         button,
-        { scale: 0.94 },
-        { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.5)" }
+        { scale: 0.98 },
+        { scale: 1, duration: 0.45, ease: "power3.out" }
       );
     }
   };
@@ -225,17 +222,25 @@ export default function ProductDetail({ product }: { product: Product }) {
             ref={addButtonRef}
             type="button"
             onClick={handleAddToBag}
-            className="mt-10 w-full border border-text py-3 text-sm uppercase tracking-widest text-text transition-colors hover:border-accent hover:text-accent sm:w-auto sm:px-10"
+            className="mt-10 block w-full max-w-sm border border-text bg-text py-4 text-center text-sm uppercase tracking-[0.2em] text-base transition-colors duration-300 hover:border-accent hover:bg-accent"
           >
-            {justAdded ? "Added" : "Add to Bag"}
+            {justAdded ? "Added to bag" : "Add to bag"}
           </button>
 
-          <Link
-            href="/shop"
-            className="mt-12 inline-block text-sm uppercase tracking-widest text-text/60 transition-colors hover:text-accent"
-          >
-            ← Back to shop
-          </Link>
+          <div className="mt-10 max-w-sm border-t border-secondary/40 pt-6">
+            <Link
+              href="/shop"
+              className="group inline-flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-text/60 transition-colors hover:text-text"
+            >
+              <span
+                aria-hidden
+                className="transition-transform duration-300 group-hover:-translate-x-1"
+              >
+                ←
+              </span>
+              Back to shop
+            </Link>
+          </div>
         </div>
       </div>
     </div>

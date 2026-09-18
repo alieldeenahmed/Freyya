@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -14,6 +15,7 @@ const navLinks = [
 
 export default function Header() {
   const { itemCount, open } = useCart();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const badgeRef = useRef<HTMLSpanElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -53,49 +55,62 @@ export default function Header() {
   }, [isMenuOpen]);
 
   const closeMenu = () => setIsMenuOpen(false);
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <header className="sticky top-0 z-50 border-b border-secondary/40 bg-base/90 backdrop-blur-sm">
-      <div className="flex items-center justify-between px-6 py-5 sm:px-10">
+      <div className="flex items-center justify-between px-6 py-5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:px-10">
         <Link
           href="/"
-          className="group relative pb-1 font-serif text-3xl font-semibold tracking-[0.06em] text-text sm:text-4xl"
+          className="group relative justify-self-start pb-1 font-serif text-3xl font-semibold tracking-[0.06em] text-text sm:text-4xl"
         >
           Freyya
           <span className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-[0.28] bg-accent transition-transform duration-500 ease-out group-hover:scale-x-100" />
         </Link>
 
-        <nav className="hidden gap-8 text-sm tracking-wide text-text/80 sm:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="transition-colors hover:text-accent"
-            >
-              {link.label}
-            </Link>
-          ))}
+        <nav className="hidden items-center gap-10 sm:flex">
+          {navLinks.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={`group relative py-2 text-xs uppercase tracking-[0.2em] transition-colors hover:text-text ${
+                  active ? "text-text" : "text-text/60"
+                }`}
+              >
+                {link.label}
+                <span
+                  className={`absolute inset-x-0 bottom-0 h-px origin-center bg-accent transition-transform duration-300 ease-out group-hover:scale-x-100 ${
+                    active ? "scale-x-100" : "scale-x-0"
+                  }`}
+                />
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-1 justify-self-end">
           <button
             type="button"
             onClick={() => setIsMenuOpen((v) => !v)}
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMenuOpen}
-            className="text-text transition-colors hover:text-accent sm:hidden"
+            className="flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent sm:hidden"
           >
             <svg
-              width="20"
-              height="16"
-              viewBox="0 0 20 16"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.4"
+              strokeLinecap="round"
             >
-              <line x1="0" y1="1" x2="20" y2="1" />
-              <line x1="0" y1="8" x2="20" y2="8" />
-              <line x1="0" y1="15" x2="20" y2="15" />
+              <line x1="4" y1="8" x2="20" y2="8" />
+              <line x1="4" y1="16" x2="20" y2="16" />
             </svg>
           </button>
 
@@ -103,23 +118,25 @@ export default function Header() {
             type="button"
             onClick={open}
             aria-label="Cart"
-            className="relative text-text transition-colors hover:text-accent"
+            className="relative flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent"
           >
             <svg
-              width="20"
-              height="22"
-              viewBox="0 0 20 22"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <path d="M5 7V5a5 5 0 0 1 10 0v2" />
-              <rect x="1" y="7" width="18" height="14" rx="2" />
+              <path d="M8.5 9V7.5a3.5 3.5 0 0 1 7 0V9" />
+              <path d="M5.5 9h13l1 11.5a.5.5 0 0 1-.5.5h-14a.5.5 0 0 1-.5-.5L5.5 9Z" />
             </svg>
             {itemCount > 0 && (
               <span
                 ref={badgeRef}
-                className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] leading-none text-base"
+                className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-none text-base"
               >
                 {itemCount}
               </span>
@@ -130,14 +147,17 @@ export default function Header() {
 
       <div
         ref={menuRef}
-        className="invisible absolute left-0 right-0 top-full flex flex-col gap-1 border-b border-secondary/40 bg-base px-6 py-4 opacity-0 sm:hidden"
+        className="invisible absolute left-0 right-0 top-full flex flex-col border-b border-secondary/40 bg-base px-6 py-3 opacity-0 sm:hidden"
       >
         {navLinks.map((link) => (
           <Link
             key={link.href}
             href={link.href}
             onClick={closeMenu}
-            className="py-2 text-sm tracking-wide text-text/80 transition-colors hover:text-accent"
+            aria-current={isActive(link.href) ? "page" : undefined}
+            className={`py-3 text-xs uppercase tracking-[0.2em] transition-colors hover:text-accent ${
+              isActive(link.href) ? "text-text" : "text-text/60"
+            }`}
           >
             {link.label}
           </Link>
