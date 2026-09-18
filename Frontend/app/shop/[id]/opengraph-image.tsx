@@ -1,9 +1,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { ImageResponse } from "next/og";
+import { loadOgFonts } from "@/lib/og-fonts";
 import { getAllProducts, getProductById } from "@/lib/products";
 
-export const alt = "Freyya product";
+// The page's metadata supplies the per-product alt text.
+export const alt = "Freyya";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -46,17 +48,32 @@ export default async function ProductOpengraphImage({
             padding: "72px 64px",
           }}
         >
-          <div style={{ fontSize: 26, letterSpacing: 12, color: "#C9A876" }}>FREYYA</div>
+          <div
+            style={{ fontFamily: "Cormorant Garamond", fontSize: 44, letterSpacing: 2 }}
+          >
+            Freyya
+          </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 72, lineHeight: 1.1 }}>{name}</div>
+            <div
+              style={{ fontFamily: "Cormorant Garamond", fontSize: 84, lineHeight: 1.05 }}
+            >
+              {name}
+            </div>
             <div style={{ width: 56, height: 2, background: "#C9A876", marginTop: 36 }} />
             {product && (
-              <div style={{ fontSize: 28, marginTop: 28, color: "#6B6058" }}>
+              <div
+                style={{
+                  fontFamily: "Manrope",
+                  fontSize: 28,
+                  marginTop: 28,
+                  color: "#6B6058",
+                }}
+              >
                 {product.tagline}
               </div>
             )}
           </div>
-          <div style={{ fontSize: 26, color: "#6B6058" }}>
+          <div style={{ fontFamily: "Manrope", fontSize: 26, color: "#6B6058" }}>
             {product ? `$${product.price}` : ""}
           </div>
         </div>
@@ -66,6 +83,6 @@ export default async function ProductOpengraphImage({
         )}
       </div>
     ),
-    size
+    { ...size, fonts: await loadOgFonts() }
   );
 }

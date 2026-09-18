@@ -121,6 +121,7 @@ Home scores 98 on desktop. Performance moves by several points between runs, so 
 
 ```
 app/            Routes, metadata, share images, sitemap and robots
+assets/         Fonts used to draw the share images and icons
 components/     UI components
 data/           Products and seeded reviews
 lib/            Cart, orders, quiz, reviews and shared helpers

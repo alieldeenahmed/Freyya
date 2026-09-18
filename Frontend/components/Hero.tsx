@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import FadeImage from "@/components/FadeImage";
-import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 
 // Optional loop, e.g. "/hero.mp4". The still below doubles as the poster frame.
@@ -10,27 +9,11 @@ const HERO_VIDEO_SRC: string | null = null;
 const HERO_IMAGE_SRC = "/hero.jpg";
 
 export default function Hero() {
-  const headlineRef = useRef<HTMLHeadingElement>(null);
-  const taglineRef = useRef<HTMLParagraphElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (prefersReducedMotion()) return;
-
     videoRef.current?.play().catch(() => {});
-
-    const ctx = gsap.context(() => {
-      gsap.from([headlineRef.current, taglineRef.current], {
-        opacity: 0,
-        y: 24,
-        duration: 1,
-        stagger: 0.15,
-        ease: "power2.out",
-        delay: 0.2,
-      });
-    });
-
-    return () => ctx.revert();
   }, []);
 
   return (
@@ -62,12 +45,15 @@ export default function Hero() {
       <div className="relative z-10 w-full px-6 pb-20 sm:px-10 sm:pb-28">
         <div className="sm:ml-auto sm:w-[46%]">
           <h1
-            ref={headlineRef}
-            className="max-w-2xl font-serif text-5xl leading-tight text-text sm:text-6xl lg:text-7xl"
+            style={{ animationDelay: "0.2s" }}
+            className="hero-rise max-w-2xl font-serif text-5xl leading-tight text-text sm:text-6xl lg:text-7xl"
           >
             Your skin, but better.
           </h1>
-          <p ref={taglineRef} className="mt-4 max-w-sm text-text/70">
+          <p
+            style={{ animationDelay: "0.35s" }}
+            className="hero-rise mt-4 max-w-sm text-text/70"
+          >
             Formulated with intention. Nothing else.
           </p>
         </div>

@@ -39,6 +39,14 @@ export async function generateMetadata({
       title: `${product.name} — ${SITE_NAME}`,
       description,
       url: `/shop/${product.id}`,
+      images: [
+        {
+          url: `/shop/${product.id}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: `${product.name} by ${SITE_NAME}, $${product.price}`,
+        },
+      ],
     },
   };
 }

@@ -1,9 +1,10 @@
 import { ImageResponse } from "next/og";
+import { loadOgFonts } from "@/lib/og-fonts";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-export default function AppleIcon() {
+export default async function AppleIcon() {
   return new ImageResponse(
     (
       <div
@@ -15,13 +16,13 @@ export default function AppleIcon() {
           justifyContent: "center",
           background: "#2B2420",
           color: "#C9A876",
-          fontSize: 110,
-          fontWeight: 500,
+          fontFamily: "Cormorant Garamond",
+          fontSize: 130,
         }}
       >
         F
       </div>
     ),
-    size
+    { ...size, fonts: await loadOgFonts() }
   );
 }

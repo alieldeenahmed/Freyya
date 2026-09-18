@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ProductGrid from "@/components/ProductGrid";
+import SortMenu from "@/components/SortMenu";
 import {
   DEFAULT_VIEW,
   GROUPS,
@@ -9,7 +10,6 @@ import {
   applyView,
   parseView,
   viewToQuery,
-  type ShopSort,
   type ShopView,
 } from "@/lib/shop";
 import type { Product } from "@/lib/types";
@@ -47,30 +47,16 @@ function ShopLayout({ products, view, onChange }: ShopLayoutProps) {
           })}
         </div>
 
-        <div className="flex items-end gap-6">
+        <div className="flex items-end justify-between gap-6 sm:justify-end">
           <p role="status" className="pb-3 text-xs text-text/65">
             {visible.length} {visible.length === 1 ? "product" : "products"}
           </p>
-          <div>
-            <label
-              htmlFor="shop-sort"
-              className="block text-[11px] uppercase tracking-[0.2em] text-text/65"
-            >
-              Sort by
-            </label>
-            <select
-              id="shop-sort"
-              value={view.sort}
-              onChange={(e) => onChange({ sort: e.target.value as ShopSort })}
-              className="mt-1 border-0 border-b border-secondary/60 bg-transparent py-2 pr-6 text-sm text-text transition-colors focus:border-accent focus:outline-none"
-            >
-              {SORTS.map((sort) => (
-                <option key={sort.id} value={sort.id}>
-                  {sort.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SortMenu
+            label="Sort by"
+            options={SORTS}
+            value={view.sort}
+            onChange={(sort) => onChange({ sort })}
+          />
         </div>
       </div>
 
