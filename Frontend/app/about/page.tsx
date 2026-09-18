@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import BrandValues from "@/components/BrandValues";
+import FadeImage from "@/components/FadeImage";
 import Reveal from "@/components/Reveal";
 
 export const metadata: Metadata = {
@@ -45,8 +45,8 @@ export default function AboutPage() {
       <section className="px-6 py-24 sm:px-10 sm:py-32">
         <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 sm:grid-cols-2 sm:gap-20">
           <Reveal>
-            <div className="relative aspect-[4/5] w-full overflow-hidden bg-secondary/30">
-              <Image
+            <div className="skeleton relative aspect-[4/5] w-full overflow-hidden">
+              <FadeImage
                 src="/showcase/golden-hour-serum-1.jpg"
                 alt="Golden serum pooled on glass"
                 fill

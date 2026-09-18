@@ -117,6 +117,7 @@ export default function Header() {
           <button
             type="button"
             onClick={open}
+            data-cart-button
             aria-label="Cart"
             className="relative flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent"
           >

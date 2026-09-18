@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import FadeImage from "@/components/FadeImage";
 import { useRef } from "react";
 import type { Product } from "@/lib/types";
 
@@ -32,12 +32,9 @@ export default function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/shop/${product.id}`} onClick={handleClick} className="group block">
-      <div ref={imageRef} className="aspect-[4/5] w-full overflow-hidden">
-        <div
-          className="relative h-full w-full transition-transform duration-500 ease-out group-hover:scale-105"
-          style={{ background: product.color }}
-        >
-          <Image
+      <div ref={imageRef} className="skeleton aspect-[4/5] w-full overflow-hidden">
+        <div className="relative h-full w-full transition-transform duration-500 ease-out group-hover:scale-105">
+          <FadeImage
             src={product.image}
             alt={product.name}
             fill

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import FadeImage from "@/components/FadeImage";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 
@@ -12,13 +12,12 @@ const HERO_IMAGE_SRC = "/hero.jpg";
 export default function Hero() {
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const taglineRef = useRef<HTMLParagraphElement>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const reduced = prefersReducedMotion();
-    setReducedMotion(reduced);
+    if (prefersReducedMotion()) return;
 
-    if (reduced) return;
+    videoRef.current?.play().catch(() => {});
 
     const ctx = gsap.context(() => {
       gsap.from([headlineRef.current, taglineRef.current], {
@@ -35,8 +34,8 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative flex h-dvh w-full items-end overflow-hidden bg-base">
-      <Image
+    <section className="skeleton relative flex h-dvh w-full items-end overflow-hidden">
+      <FadeImage
         src={HERO_IMAGE_SRC}
         alt=""
         fill
@@ -47,11 +46,11 @@ export default function Hero() {
 
       {HERO_VIDEO_SRC && (
         <video
+          ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover"
           src={HERO_VIDEO_SRC}
           poster={HERO_IMAGE_SRC}
-          autoPlay={!reducedMotion}
-          loop={!reducedMotion}
+          loop
           muted
           playsInline
           preload="none"

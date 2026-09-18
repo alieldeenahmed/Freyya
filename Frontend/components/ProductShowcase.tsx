@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef } from "react";
+import FadeImage from "@/components/FadeImage";
 import type { Product } from "@/lib/types";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -56,7 +56,7 @@ export default function ProductShowcase({ product }: { product: Product }) {
     <section ref={sectionRef} className="relative w-full">
       <div className="sticky top-0 flex min-h-dvh w-full items-center bg-base px-6 py-24 sm:px-10">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 sm:grid-cols-2">
-          <div className="relative aspect-[4/5] w-full overflow-hidden">
+          <div className="skeleton relative aspect-[4/5] w-full overflow-hidden">
             {MOMENTS.map((caption, i) => (
               <div
                 key={caption}
@@ -64,13 +64,10 @@ export default function ProductShowcase({ product }: { product: Product }) {
                   panelRefs.current[i] = el;
                 }}
                 className="absolute inset-0 flex items-end p-6"
-                style={{
-                  opacity: i === 0 ? 1 : 0,
-                  background: product.color,
-                }}
+                style={{ opacity: i === 0 ? 1 : 0 }}
               >
                 {product.showcase?.[i] && (
-                  <Image
+                  <FadeImage
                     src={product.showcase[i]}
                     alt={`${product.name} — ${caption}`}
                     fill

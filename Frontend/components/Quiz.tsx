@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import FadeImage from "@/components/FadeImage";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useMagnetic } from "@/lib/useMagnetic";
@@ -95,11 +95,8 @@ export default function Quiz() {
               <p className="text-xs uppercase tracking-widest text-text/50">
                 Your match
               </p>
-              <div
-                className="relative mx-auto mt-6 h-52 w-40 overflow-hidden"
-                style={{ background: resultVariant.hex }}
-              >
-                <Image
+              <div className="skeleton relative mx-auto mt-6 h-52 w-40 overflow-hidden">
+                <FadeImage
                   src={resultVariant.image}
                   alt={`${resultProduct.name} in ${resultVariant.name}`}
                   fill

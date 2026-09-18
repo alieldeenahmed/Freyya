@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef } from "react";
+import FadeImage from "@/components/FadeImage";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
@@ -57,11 +57,8 @@ export default function CartDrawer() {
           <div className="mt-6 flex-1 space-y-6 overflow-y-auto">
             {items.map((item) => (
               <div key={item.id} className="flex gap-4">
-                <div
-                  className="relative h-20 w-16 flex-shrink-0 overflow-hidden"
-                  style={{ background: item.color }}
-                >
-                  <Image
+                <div className="skeleton relative h-20 w-16 flex-shrink-0 overflow-hidden">
+                  <FadeImage
                     src={item.image}
                     alt={item.name}
                     fill

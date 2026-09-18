@@ -1,12 +1,13 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import FadeImage from "@/components/FadeImage";
 import type { Product } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
+import { flyToCart } from "@/lib/flyToCart";
 
 export default function ProductDetail({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
@@ -21,7 +22,7 @@ export default function ProductDetail({ product }: { product: Product }) {
   const gallery = product.variants?.map((v) => v.image) ?? [product.image];
 
   const handleAddToBag = () => {
-    addItem({
+    const item = {
       id: selectedVariant ? `${product.id}:${selectedVariant.id}` : product.id,
       productId: product.id,
       variantId: selectedVariant?.id,
@@ -30,10 +31,21 @@ export default function ProductDetail({ product }: { product: Product }) {
       price: product.price,
       color: activeColor,
       image: activeImage,
+    };
+
+    // Reuse the already-loaded, optimized photo for the flying thumbnail.
+    const loadedSrc =
+      imageRef.current?.querySelector<HTMLImageElement>("div.opacity-100 img")
+        ?.currentSrc || activeImage;
+
+    flyToCart({
+      from: imageRef.current,
+      src: loadedSrc,
+      onArrive: () => addItem(item),
     });
 
     setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1200);
+    setTimeout(() => setJustAdded(false), 1600);
 
     const button = addButtonRef.current;
     if (button && !prefersReducedMotion()) {
@@ -100,10 +112,32 @@ export default function ProductDetail({ product }: { product: Product }) {
     document.body.appendChild(ghost);
     el.style.visibility = "hidden";
 
+    // Hold the copy over the real image until it has loaded, then dissolve it,
+    // so a slow connection never shows a blank frame or the skeleton mid-flight.
+    let dissolved = false;
+    const dissolve = () => {
+      if (dissolved) return;
+      dissolved = true;
+      gsap.to(ghost, {
+        opacity: 0,
+        duration: 0.35,
+        ease: "power1.out",
+        onComplete: () => {
+          ghost.remove();
+          sessionStorage.removeItem(key);
+        },
+      });
+    };
+
     const finish = () => {
-      sessionStorage.removeItem(key);
-      ghost.remove();
       el.style.visibility = "";
+      const realImg = el.querySelector("img");
+      if (!realImg || (realImg.complete && realImg.naturalWidth > 0)) {
+        dissolve();
+        return;
+      }
+      realImg.addEventListener("load", dissolve, { once: true });
+      window.setTimeout(dissolve, 2500);
     };
 
     const ctx = gsap.context(() => {
@@ -139,25 +173,28 @@ export default function ProductDetail({ product }: { product: Product }) {
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 sm:grid-cols-2">
         <div
           ref={imageRef}
-          className="relative aspect-[4/5] w-full overflow-hidden"
-          style={{ background: activeColor }}
+          className="skeleton relative aspect-[4/5] w-full overflow-hidden"
         >
           {gallery.map((src, i) => (
-            <Image
+            <div
               key={src}
-              src={src}
-              alt={
-                product.variants
-                  ? `${product.name} in ${product.variants[i].name}`
-                  : product.name
-              }
-              fill
-              priority={i === 0}
-              sizes="(min-width: 1024px) 512px, (min-width: 640px) 45vw, 100vw"
-              className={`object-cover transition-opacity duration-500 ${
+              className={`absolute inset-0 transition-opacity duration-500 ${
                 src === activeImage ? "opacity-100" : "opacity-0"
               }`}
-            />
+            >
+              <FadeImage
+                src={src}
+                alt={
+                  product.variants
+                    ? `${product.name} in ${product.variants[i].name}`
+                    : product.name
+                }
+                fill
+                priority={i === 0}
+                sizes="(min-width: 1024px) 512px, (min-width: 640px) 45vw, 100vw"
+                className="object-cover"
+              />
+            </div>
           ))}
         </div>
 
