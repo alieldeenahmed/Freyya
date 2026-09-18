@@ -55,6 +55,8 @@ export interface Review {
   date: string;
   verified: boolean;
   variant?: string;
+  // Written on this device; not part of the seeded data.
+  mine?: boolean;
 }
 
 export interface RatingSummary {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllProducts, getProductById, getRelatedProducts } from "@/lib/products";
-import { getRatingSummary, getReviews } from "@/lib/reviews";
+import { getReviews } from "@/lib/reviews";
 import ProductDetail from "@/components/ProductDetail";
 import ProductReviews from "@/components/ProductReviews";
 import RelatedProducts from "@/components/RelatedProducts";
@@ -35,16 +35,17 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
-  const summary = getRatingSummary(product.id);
+  const reviews = getReviews(product.id);
 
   return (
     // Keyed so moving between products resets the selected shade and state.
     <div key={product.id}>
-      <ProductDetail product={product} rating={summary} />
+      <ProductDetail product={product} reviews={reviews} />
       <ProductReviews
+        productId={product.id}
         productName={product.name}
-        reviews={getReviews(product.id)}
-        summary={summary}
+        seeded={reviews}
+        shades={product.variants?.map((variant) => variant.name)}
       />
       <RelatedProducts products={getRelatedProducts(product.id)} />
     </div>

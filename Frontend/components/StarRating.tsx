@@ -1,7 +1,7 @@
 const STAR =
   "M10 1.6l2.5 5.4 5.9.7-4.4 4 1.2 5.8L10 14.6l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7L10 1.6Z";
 
-function Star({ className }: { className: string }) {
+export function Star({ className }: { className: string }) {
   return (
     <svg viewBox="0 0 20 20" className={className} aria-hidden>
       <path d={STAR} fill="currentColor" />

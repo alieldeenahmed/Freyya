@@ -1,14 +1,17 @@
 import { reviews } from "@/data/reviews";
 import type { RatingSummary, Review } from "@/lib/types";
 
-export function getReviews(productId: string): Review[] {
-  return reviews
-    .filter((review) => review.productId === productId)
-    .sort((a, b) => b.date.localeCompare(a.date));
+export function sortReviews(list: Review[]): Review[] {
+  return [...list].sort(
+    (a, b) => b.date.localeCompare(a.date) || Number(Boolean(b.mine)) - Number(Boolean(a.mine))
+  );
 }
 
-export function getRatingSummary(productId: string): RatingSummary {
-  const list = getReviews(productId);
+export function getReviews(productId: string): Review[] {
+  return sortReviews(reviews.filter((review) => review.productId === productId));
+}
+
+export function summarize(list: Review[]): RatingSummary {
   const distribution: RatingSummary["distribution"] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
   for (const review of list) {

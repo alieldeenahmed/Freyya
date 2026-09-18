@@ -5,21 +5,23 @@ import Link from "next/link";
 import FadeImage from "@/components/FadeImage";
 import ProductAccordion from "@/components/ProductAccordion";
 import StarRating from "@/components/StarRating";
-import type { Product, RatingSummary } from "@/lib/types";
+import type { Product, Review } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
 import { getStock } from "@/lib/products";
+import { useProductReviews } from "@/lib/useProductReviews";
 
 const LOW_STOCK = 5;
 
 export default function ProductDetail({
   product,
-  rating,
+  reviews,
 }: {
   product: Product;
-  rating: RatingSummary;
+  reviews: Review[];
 }) {
+  const { summary: rating } = useProductReviews(product.id, reviews);
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
   const [justAdded, setJustAdded] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
