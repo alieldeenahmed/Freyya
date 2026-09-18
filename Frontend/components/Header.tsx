@@ -57,8 +57,12 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-secondary/40 bg-base/90 backdrop-blur-sm">
       <div className="flex items-center justify-between px-6 py-5 sm:px-10">
-        <Link href="/" className="font-serif text-2xl tracking-wide text-text">
+        <Link
+          href="/"
+          className="group relative pb-1 font-serif text-3xl font-semibold tracking-[0.06em] text-text sm:text-4xl"
+        >
           Freyya
+          <span className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-[0.28] bg-accent transition-transform duration-500 ease-out group-hover:scale-x-100" />
         </Link>
 
         <nav className="hidden gap-8 text-sm tracking-wide text-text/80 sm:flex">
