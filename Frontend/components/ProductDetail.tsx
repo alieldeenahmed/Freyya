@@ -3,12 +3,23 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import FadeImage from "@/components/FadeImage";
-import type { Product } from "@/lib/types";
+import ProductAccordion from "@/components/ProductAccordion";
+import StarRating from "@/components/StarRating";
+import type { Product, RatingSummary } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
+import { getStock } from "@/lib/products";
 
-export default function ProductDetail({ product }: { product: Product }) {
+const LOW_STOCK = 5;
+
+export default function ProductDetail({
+  product,
+  rating,
+}: {
+  product: Product;
+  rating: RatingSummary;
+}) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
   const [justAdded, setJustAdded] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -16,15 +27,27 @@ export default function ProductDetail({ product }: { product: Product }) {
   const wipeRef = useRef<HTMLSpanElement>(null);
   const wipeTimeline = useRef<gsap.core.Timeline | null>(null);
   const resetTimer = useRef<number | undefined>(undefined);
-  const { addItem } = useCart();
+  const { items, addItem } = useCart();
 
   const activeColor = selectedVariant?.hex ?? product.color;
   const activeImage = selectedVariant?.image ?? product.image;
   const gallery = product.variants?.map((v) => v.image) ?? [product.image];
 
+  const itemId = selectedVariant
+    ? `${product.id}:${selectedVariant.id}`
+    : product.id;
+  const stock = getStock(product, selectedVariant?.id);
+  const inBag = items.find((i) => i.id === itemId)?.quantity ?? 0;
+  const soldOut = stock <= 0;
+  const capReached = !soldOut && inBag >= stock;
+  // Keep the button live while its "Added" confirmation plays out.
+  const unavailable = soldOut || (capReached && !justAdded);
+
   const handleAddToBag = () => {
-    const item = {
-      id: selectedVariant ? `${product.id}:${selectedVariant.id}` : product.id,
+    if (unavailable) return;
+
+    addItem({
+      id: itemId,
       productId: product.id,
       variantId: selectedVariant?.id,
       name: product.name,
@@ -32,9 +55,8 @@ export default function ProductDetail({ product }: { product: Product }) {
       price: product.price,
       color: activeColor,
       image: activeImage,
-    };
-
-    addItem(item);
+      stock,
+    });
 
     setJustAdded(true);
     window.clearTimeout(resetTimer.current);
@@ -172,32 +194,34 @@ export default function ProductDetail({ product }: { product: Product }) {
 
   return (
     <div className="px-6 py-16 sm:px-10 sm:py-24">
-      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 sm:grid-cols-2">
-        <div
-          ref={imageRef}
-          className="skeleton relative aspect-[4/5] w-full overflow-hidden"
-        >
-          {gallery.map((src, i) => (
-            <div
-              key={src}
-              className={`absolute inset-0 transition-opacity duration-500 ${
-                src === activeImage ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <FadeImage
-                src={src}
-                alt={
-                  product.variants
-                    ? `${product.name} in ${product.variants[i].name}`
-                    : product.name
-                }
-                fill
-                priority={i === 0}
-                sizes="(min-width: 1024px) 512px, (min-width: 640px) 45vw, 100vw"
-                className="object-cover"
-              />
-            </div>
-          ))}
+      <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-12 sm:grid-cols-2">
+        <div className="sm:sticky sm:top-32">
+          <div
+            ref={imageRef}
+            className="skeleton relative aspect-[4/5] w-full overflow-hidden"
+          >
+            {gallery.map((src, i) => (
+              <div
+                key={src}
+                className={`absolute inset-0 transition-opacity duration-500 ${
+                  src === activeImage ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <FadeImage
+                  src={src}
+                  alt={
+                    product.variants
+                      ? `${product.name} in ${product.variants[i].name}`
+                      : product.name
+                  }
+                  fill
+                  priority={i === 0}
+                  sizes="(min-width: 1024px) 512px, (min-width: 640px) 45vw, 100vw"
+                  className="object-cover"
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div ref={textRef}>
@@ -207,6 +231,23 @@ export default function ProductDetail({ product }: { product: Product }) {
           <h1 className="mt-2 font-serif text-4xl text-text sm:text-5xl">
             {product.name}
           </h1>
+          {rating.count > 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("reviews")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+              className="group mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-text/60 transition-colors hover:text-text"
+            >
+              <StarRating rating={rating.average} size="h-3.5 w-3.5" />
+              <span className="border-b border-transparent pb-0.5 transition-colors group-hover:border-accent">
+                {rating.average.toFixed(1)} · {rating.count}{" "}
+                {rating.count === 1 ? "review" : "reviews"}
+              </span>
+            </button>
+          )}
           <p className="mt-4 max-w-sm text-text/70">{product.tagline}</p>
           <p className="mt-4 max-w-sm text-sm text-text/60">
             {product.description}
@@ -223,8 +264,31 @@ export default function ProductDetail({ product }: { product: Product }) {
             ))}
           </ul>
 
-          <p className="mt-8 font-serif text-2xl text-text">
-            ${product.price}
+          <p className="mt-8 font-serif text-2xl text-text">${product.price}</p>
+          <p
+            className={`mt-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] ${
+              soldOut
+                ? "text-text/40"
+                : stock <= LOW_STOCK
+                  ? "text-accent"
+                  : "text-text/60"
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 rounded-full ${
+                soldOut
+                  ? "bg-text/30"
+                  : stock <= LOW_STOCK
+                    ? "bg-accent"
+                    : "bg-text/40"
+              }`}
+            />
+            {soldOut
+              ? "Sold out"
+              : stock <= LOW_STOCK
+                ? `Only ${stock} left`
+                : `${stock} in stock`}
           </p>
 
           {product.variants && (
@@ -237,9 +301,15 @@ export default function ProductDetail({ product }: { product: Product }) {
                   <button
                     key={variant.id}
                     type="button"
-                    aria-label={variant.name}
+                    aria-label={
+                      variant.stock <= 0
+                        ? `${variant.name} (sold out)`
+                        : variant.name
+                    }
                     onClick={() => setSelectedVariant(variant)}
-                    className="h-11 w-11 rounded-full border-2 transition-transform hover:scale-110"
+                    className={`h-11 w-11 rounded-full border-2 transition-transform hover:scale-110 ${
+                      variant.stock <= 0 ? "opacity-40" : ""
+                    }`}
                     style={{
                       background: variant.hex,
                       borderColor:
@@ -260,7 +330,8 @@ export default function ProductDetail({ product }: { product: Product }) {
           <button
             type="button"
             onClick={handleAddToBag}
-            className="relative mt-10 block w-full max-w-sm overflow-hidden border border-text bg-text py-4 text-center text-sm uppercase tracking-[0.2em] text-base transition-colors duration-300 hover:text-accent"
+            disabled={unavailable}
+            className="relative mt-10 block w-full max-w-sm overflow-hidden border border-text bg-text py-4 text-center text-sm uppercase tracking-[0.2em] text-base transition-colors duration-300 enabled:hover:text-accent disabled:cursor-not-allowed disabled:border-text/20 disabled:bg-transparent disabled:text-text/40"
           >
             <span
               ref={wipeRef}
@@ -273,11 +344,19 @@ export default function ProductDetail({ product }: { product: Product }) {
                 justAdded ? "text-text delay-[350ms]" : ""
               }`}
             >
-              {justAdded ? "Added to bag" : "Add to bag"}
+              {justAdded
+                ? "Added to bag"
+                : soldOut
+                  ? "Sold out"
+                  : capReached
+                    ? `All ${stock} in your bag`
+                    : "Add to bag"}
             </span>
           </button>
 
-          <div className="mt-10 max-w-sm border-t border-secondary/40 pt-6">
+          <ProductAccordion details={product.details} />
+
+          <div className="mt-8 max-w-sm">
             <Link
               href="/shop"
               className="group inline-flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-text/60 transition-colors hover:text-text"

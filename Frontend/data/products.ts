@@ -17,6 +17,16 @@ export const products: Product[] = [
       "/products/dawn-cleanse.jpg",
       "/showcase/dawn-cleanse-3.jpg",
     ],
+    stock: 24,
+    details: {
+      ingredients:
+        "Water, Glycerin, Coco-Glucoside, Sodium Cocoyl Isethionate, Panthenol, Aloe Barbadensis Leaf Juice, Allantoin, Sodium PCA, Citric Acid, Ethylhexylglycerin.",
+      skinTypes: ["Normal", "Dry", "Combination", "Oily", "Sensitive"],
+      size: "150ml / 5.07 fl oz",
+      usage:
+        "Massage a small amount onto damp skin, morning and evening. Rinse with lukewarm water. Pat dry.",
+    },
+    related: ["golden-hour-serum", "second-skin-cream", "veil-spf"],
   },
   {
     id: "golden-hour-serum",
@@ -34,7 +44,17 @@ export const products: Product[] = [
       "/products/golden-hour-serum.jpg",
       "/showcase/golden-hour-serum-3.jpg",
     ],
+    stock: 3,
     isHero: true,
+    details: {
+      ingredients:
+        "Water, Niacinamide, Sodium Hyaluronate, Glycerin, Ascorbyl Glucoside, Squalane, Panthenol, Tocopherol, Ferulic Acid, Propanediol, Xanthan Gum, Phenoxyethanol.",
+      skinTypes: ["Normal", "Dry", "Combination", "Oily", "Sensitive"],
+      size: "30ml / 1.01 fl oz",
+      usage:
+        "Press two to three drops onto clean skin, morning or evening, before moisturizer. Pat in rather than rubbing.",
+    },
+    related: ["dawn-cleanse", "second-skin-cream", "veil-spf"],
   },
   {
     id: "second-skin-cream",
@@ -52,6 +72,16 @@ export const products: Product[] = [
       "/products/second-skin-cream.jpg",
       "/showcase/second-skin-cream-3.jpg",
     ],
+    stock: 12,
+    details: {
+      ingredients:
+        "Water, Squalane, Glycerin, Ceramide NP, Cholesterol, Butyrospermum Parkii Butter, Cetearyl Alcohol, Sodium Hyaluronate, Panthenol, Tocopherol, Phenoxyethanol.",
+      skinTypes: ["Normal", "Dry", "Combination", "Sensitive"],
+      size: "50ml / 1.7 fl oz",
+      usage:
+        "Warm a pea-sized amount between your fingertips and press over face and neck after serum. Morning and night.",
+    },
+    related: ["golden-hour-serum", "veil-spf", "freyya-balm"],
   },
   {
     id: "veil-spf",
@@ -64,6 +94,16 @@ export const products: Product[] = [
     specs: ["SPF 50", "40ml", "All skin types"],
     color: "#F4E9DD",
     image: "/products/veil-spf.jpg",
+    stock: 40,
+    details: {
+      ingredients:
+        "Zinc Oxide, Water, Squalane, Niacinamide, Caprylic/Capric Triglyceride, Glycerin, Silica, Tocopherol, Polyglyceryl-3 Polyricinoleate.",
+      skinTypes: ["Normal", "Dry", "Combination", "Oily", "Sensitive"],
+      size: "40ml / 1.35 fl oz",
+      usage:
+        "Apply generously as the last step of your morning routine — two finger-lengths for face and neck. Reapply every two hours in direct sun.",
+    },
+    related: ["second-skin-cream", "dew-drops", "freyya-balm"],
   },
   {
     id: "freyya-balm",
@@ -76,11 +116,20 @@ export const products: Product[] = [
     specs: ["Lip Balm", "4.5g", "4 shades"],
     color: "#B97572",
     image: "/products/freyya-balm-bare.jpg",
+    details: {
+      ingredients:
+        "Ricinus Communis Seed Oil, Butyrospermum Parkii Butter, Cera Alba, Squalane, Helianthus Annuus Seed Oil, Tocopherol, Mica, Iron Oxides.",
+      skinTypes: ["All skin types"],
+      size: "4.5g / 0.16 oz",
+      usage:
+        "Swipe over bare lips. Layer for more depth, or wear a single pass for a sheer wash of color. Reapply as needed.",
+    },
+    related: ["dew-drops", "veil-spf", "second-skin-cream"],
     variants: [
-      { id: "bare", name: "Bare", hex: "#D8A798", image: "/products/freyya-balm-bare.jpg", undertone: "neutral", intensity: "subtle" },
-      { id: "petal", name: "Petal", hex: "#E8B4B8", image: "/products/freyya-balm-petal.jpg", undertone: "cool", intensity: "subtle" },
-      { id: "rosewood", name: "Rosewood", hex: "#B97572", image: "/products/freyya-balm-rosewood.jpg", undertone: "cool", intensity: "bold" },
-      { id: "terracotta", name: "Terracotta", hex: "#C1694F", image: "/products/freyya-balm-terracotta.jpg", undertone: "warm", intensity: "bold" },
+      { id: "bare", name: "Bare", hex: "#D8A798", image: "/products/freyya-balm-bare.jpg", stock: 18, undertone: "neutral", intensity: "subtle" },
+      { id: "petal", name: "Petal", hex: "#E8B4B8", image: "/products/freyya-balm-petal.jpg", stock: 4, undertone: "cool", intensity: "subtle" },
+      { id: "rosewood", name: "Rosewood", hex: "#B97572", image: "/products/freyya-balm-rosewood.jpg", stock: 9, undertone: "cool", intensity: "bold" },
+      { id: "terracotta", name: "Terracotta", hex: "#C1694F", image: "/products/freyya-balm-terracotta.jpg", stock: 2, undertone: "warm", intensity: "bold" },
     ],
   },
   {
@@ -94,11 +143,20 @@ export const products: Product[] = [
     specs: ["Highlighter", "15ml", "4 shades"],
     color: "#D4B483",
     image: "/products/dew-drops-moonlight.jpg",
+    details: {
+      ingredients:
+        "Caprylic/Capric Triglyceride, Squalane, Mica, Silica, Synthetic Fluorphlogopite, Tocopherol, Titanium Dioxide, Iron Oxides.",
+      skinTypes: ["Normal", "Dry", "Combination"],
+      size: "15ml / 0.51 fl oz",
+      usage:
+        "Press one to two drops onto the cheekbones, brow bone and bridge of the nose, or mix a drop into moisturizer. Blend with fingertips.",
+    },
+    related: ["freyya-balm", "veil-spf", "golden-hour-serum"],
     variants: [
-      { id: "moonlight", name: "Moonlight", hex: "#F0EAE2", image: "/products/dew-drops-moonlight.jpg", undertone: "cool", intensity: "subtle" },
-      { id: "champagne", name: "Champagne", hex: "#D4B483", image: "/products/dew-drops-champagne.jpg", undertone: "warm", intensity: "subtle" },
-      { id: "rose-gold", name: "Rose Gold", hex: "#D9A996", image: "/products/dew-drops-rose-gold.jpg", undertone: "neutral", intensity: "bold" },
-      { id: "bronze", name: "Bronze", hex: "#A97452", image: "/products/dew-drops-bronze.jpg", undertone: "warm", intensity: "bold" },
+      { id: "moonlight", name: "Moonlight", hex: "#F0EAE2", image: "/products/dew-drops-moonlight.jpg", stock: 11, undertone: "cool", intensity: "subtle" },
+      { id: "champagne", name: "Champagne", hex: "#D4B483", image: "/products/dew-drops-champagne.jpg", stock: 5, undertone: "warm", intensity: "subtle" },
+      { id: "rose-gold", name: "Rose Gold", hex: "#D9A996", image: "/products/dew-drops-rose-gold.jpg", stock: 3, undertone: "neutral", intensity: "bold" },
+      { id: "bronze", name: "Bronze", hex: "#A97452", image: "/products/dew-drops-bronze.jpg", stock: 8, undertone: "warm", intensity: "bold" },
     ],
   },
 ];

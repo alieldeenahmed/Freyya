@@ -22,3 +22,19 @@ export function getVariant(productId: string, variantId: string) {
     (variant) => variant.id === variantId
   );
 }
+
+export function getRelatedProducts(productId: string): Product[] {
+  const product = getProductById(productId);
+  if (!product) return [];
+
+  return product.related
+    .map((id) => getProductById(id))
+    .filter((related): related is Product => Boolean(related));
+}
+
+export function getStock(product: Product, variantId?: string): number {
+  if (product.variants) {
+    return product.variants.find((v) => v.id === variantId)?.stock ?? 0;
+  }
+  return product.stock ?? 0;
+}

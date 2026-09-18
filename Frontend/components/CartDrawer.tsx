@@ -74,6 +74,11 @@ export default function CartDrawer() {
                     </p>
                   )}
                   <p className="mt-1 text-sm text-text/70">${item.price}</p>
+                  {item.quantity >= item.stock && (
+                    <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-accent">
+                      Maximum available
+                    </p>
+                  )}
 
                   <div className="mt-2 flex items-center gap-3">
                     <button
@@ -88,8 +93,9 @@ export default function CartDrawer() {
                     <button
                       type="button"
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      disabled={item.quantity >= item.stock}
                       aria-label="Increase quantity"
-                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent"
+                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-secondary/50 disabled:hover:text-text/70"
                     >
                       +
                     </button>
