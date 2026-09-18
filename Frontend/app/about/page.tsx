@@ -52,6 +52,7 @@ export default function AboutPage() {
                 src="/showcase/golden-hour-serum-1.jpg"
                 alt="Golden serum pooled on glass"
                 fill
+                priority
                 sizes="(min-width: 1152px) 528px, (min-width: 640px) 45vw, 100vw"
                 className="object-cover"
               />

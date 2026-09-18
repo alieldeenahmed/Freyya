@@ -5,7 +5,19 @@ import FadeImage from "@/components/FadeImage";
 import { useRef } from "react";
 import type { Product } from "@/lib/types";
 
-export default function ProductCard({ product }: { product: Product }) {
+interface ProductCardProps {
+  product: Product;
+  // Preload the photo when the card is among the first things on screen.
+  priority?: boolean;
+  // Match the surrounding outline: an h2 under a page title, an h3 under a section heading.
+  headingLevel?: "h2" | "h3";
+}
+
+export default function ProductCard({
+  product,
+  priority = false,
+  headingLevel: Heading = "h3",
+}: ProductCardProps) {
   const imageRef = useRef<HTMLDivElement>(null);
 
   const handleClick = () => {
@@ -38,6 +50,7 @@ export default function ProductCard({ product }: { product: Product }) {
             src={product.image}
             alt={product.name}
             fill
+            priority={priority}
             sizes="(min-width: 1024px) 384px, (min-width: 640px) 45vw, 100vw"
             className="object-cover"
           />
@@ -47,9 +60,9 @@ export default function ProductCard({ product }: { product: Product }) {
         <p className="text-xs uppercase tracking-widest text-text/65">
           {product.category}
         </p>
-        <h3 className="mt-1 font-serif text-xl text-text transition-colors group-hover:text-accent-deep">
+        <Heading className="mt-1 font-serif text-xl text-text transition-colors group-hover:text-accent-deep">
           {product.name}
-        </h3>
+        </Heading>
         <p className="mt-1 text-sm text-text/70">${product.price}</p>
       </div>
     </Link>

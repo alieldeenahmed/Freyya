@@ -17,8 +17,13 @@ export default function ShopPage() {
       <div className="mx-auto max-w-6xl">
         <h1 className="font-serif text-4xl text-text sm:text-5xl">Shop</h1>
         <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {products.map((product, index) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              headingLevel="h2"
+              priority={index < 3}
+            />
           ))}
         </div>
       </div>
