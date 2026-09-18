@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 import CartDrawer from "@/components/CartDrawer";
+import CartNotice from "@/components/CartNotice";
 import { CartProvider } from "@/lib/cart-context";
 
 const cormorant = Cormorant_Garamond({
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer />
           </SmoothScrollProvider>
+          <CartNotice />
           <CartDrawer />
         </CartProvider>
       </body>

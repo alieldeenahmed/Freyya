@@ -32,8 +32,8 @@ export default function Header() {
 
     gsap.fromTo(
       badge,
-      { scale: 0.6, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }
+      { yPercent: 110, opacity: 0 },
+      { yPercent: 0, opacity: 1, duration: 0.7, ease: "power3.out" }
     );
   }, [itemCount]);
 
@@ -135,11 +135,10 @@ export default function Header() {
               <path d="M5.5 9h13l1 11.5a.5.5 0 0 1-.5.5h-14a.5.5 0 0 1-.5-.5L5.5 9Z" />
             </svg>
             {itemCount > 0 && (
-              <span
-                ref={badgeRef}
-                className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-none text-base"
-              >
-                {itemCount}
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center overflow-hidden rounded-full bg-accent px-1 text-[10px] leading-none text-base">
+                <span ref={badgeRef} className="block">
+                  {itemCount}
+                </span>
               </span>
             )}
           </button>

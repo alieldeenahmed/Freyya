@@ -7,14 +7,15 @@ import type { Product } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
-import { flyToCart } from "@/lib/flyToCart";
 
 export default function ProductDetail({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
   const [justAdded, setJustAdded] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const wipeRef = useRef<HTMLSpanElement>(null);
+  const wipeTimeline = useRef<gsap.core.Timeline | null>(null);
+  const resetTimer = useRef<number | undefined>(undefined);
   const { addItem } = useCart();
 
   const activeColor = selectedVariant?.hex ?? product.color;
@@ -33,20 +34,29 @@ export default function ProductDetail({ product }: { product: Product }) {
       image: activeImage,
     };
 
-    const button = addButtonRef.current;
-
-    flyToCart({ from: button, onArrive: () => addItem(item) });
+    addItem(item);
 
     setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1600);
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => setJustAdded(false), 2000);
 
-    if (button && !prefersReducedMotion()) {
-      gsap.fromTo(
-        button,
-        { scale: 0.99 },
-        { scale: 1, duration: 0.6, ease: "power3.out" }
-      );
+    // Gold sweeps across the button, holds, then draws back.
+    const wipe = wipeRef.current;
+    if (!wipe) return;
+    wipeTimeline.current?.kill();
+
+    if (prefersReducedMotion()) {
+      gsap.set(wipe, { scaleX: 1 });
+      wipeTimeline.current = gsap.timeline().set(wipe, { scaleX: 0 }, 2);
+      return;
     }
+
+    wipeTimeline.current = gsap
+      .timeline()
+      .set(wipe, { transformOrigin: "0% 50%" })
+      .to(wipe, { scaleX: 1, duration: 0.7, ease: "power3.inOut" })
+      .set(wipe, { transformOrigin: "100% 50%" }, "+=1")
+      .to(wipe, { scaleX: 0, duration: 0.7, ease: "power3.inOut" });
   };
 
   // Runs before paint so the finished image never flashes ahead of the morph.
@@ -248,12 +258,23 @@ export default function ProductDetail({ product }: { product: Product }) {
           )}
 
           <button
-            ref={addButtonRef}
             type="button"
             onClick={handleAddToBag}
-            className="mt-10 block w-full max-w-sm border border-text bg-text py-4 text-center text-sm uppercase tracking-[0.2em] text-base transition-colors duration-300 hover:border-accent hover:bg-accent"
+            className="relative mt-10 block w-full max-w-sm overflow-hidden border border-text bg-text py-4 text-center text-sm uppercase tracking-[0.2em] text-base transition-colors duration-300 hover:text-accent"
           >
-            {justAdded ? "Added to bag" : "Add to bag"}
+            <span
+              ref={wipeRef}
+              aria-hidden
+              className="absolute inset-0 bg-accent"
+              style={{ transform: "scaleX(0)", transformOrigin: "0% 50%" }}
+            />
+            <span
+              className={`relative transition-colors duration-[250ms] ${
+                justAdded ? "text-text delay-[350ms]" : ""
+              }`}
+            >
+              {justAdded ? "Added to bag" : "Add to bag"}
+            </span>
           </button>
 
           <div className="mt-10 max-w-sm border-t border-secondary/40 pt-6">
