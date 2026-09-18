@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
@@ -13,6 +13,7 @@ export default function ProductDetail({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
   const [justAdded, setJustAdded] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const { addItem } = useCart();
 
@@ -47,46 +48,93 @@ export default function ProductDetail({ product }: { product: Product }) {
     }
   };
 
-  useEffect(() => {
+  // Runs before paint so the finished image never flashes ahead of the morph.
+  useLayoutEffect(() => {
     const el = imageRef.current;
     if (!el) return;
 
     const key = `freyya:flip:${product.id}`;
-    const stored = sessionStorage.getItem(key);
-    if (!stored) return;
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return;
 
-    sessionStorage.removeItem(key);
-
-    if (prefersReducedMotion()) return;
-
-    const rect = JSON.parse(stored) as {
+    const from = JSON.parse(raw) as {
       top: number;
       left: number;
       width: number;
       height: number;
+      src: string;
+      color: string;
+      at: number;
     };
 
-    const state = Flip.getState(el);
+    if (prefersReducedMotion() || Date.now() - from.at > 4000) {
+      sessionStorage.removeItem(key);
+      return;
+    }
 
-    gsap.set(el, {
+    // The new page starts at the top; settle that before measuring the target.
+    window.scrollTo(0, 0);
+
+    // A fixed copy of the card image flies to the real one, so the grid never
+    // reflows and the text column stays put.
+    const ghost = document.createElement("div");
+    Object.assign(ghost.style, {
       position: "fixed",
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-      zIndex: 50,
+      top: `${from.top}px`,
+      left: `${from.left}px`,
+      width: `${from.width}px`,
+      height: `${from.height}px`,
+      background: from.color,
+      overflow: "hidden",
+      pointerEvents: "none",
+      zIndex: "40",
+      willChange: "transform",
+    });
+    const ghostImg = document.createElement("img");
+    ghostImg.src = from.src;
+    ghostImg.alt = "";
+    Object.assign(ghostImg.style, {
+      display: "block",
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    });
+    ghost.appendChild(ghostImg);
+    document.body.appendChild(ghost);
+    el.style.visibility = "hidden";
+
+    const finish = () => {
+      sessionStorage.removeItem(key);
+      ghost.remove();
+      el.style.visibility = "";
+    };
+
+    const ctx = gsap.context(() => {
+      const textItems = textRef.current?.children;
+      if (textItems) {
+        gsap.from(textItems, {
+          opacity: 0,
+          y: 16,
+          duration: 0.7,
+          stagger: 0.06,
+          delay: 0.35,
+          ease: "power2.out",
+        });
+      }
+
+      Flip.fit(ghost, el, {
+        scale: true,
+        duration: 0.85,
+        ease: "power3.inOut",
+        onComplete: finish,
+      });
     });
 
-    Flip.from(state, {
-      duration: 0.7,
-      ease: "power2.inOut",
-      absolute: true,
-      onComplete: () => {
-        gsap.set(el, {
-          clearProps: "position,top,left,width,height,zIndex",
-        });
-      },
-    });
+    return () => {
+      ctx.revert();
+      ghost.remove();
+      el.style.visibility = "";
+    };
   }, [product.id]);
 
   return (
@@ -116,7 +164,7 @@ export default function ProductDetail({ product }: { product: Product }) {
           ))}
         </div>
 
-        <div>
+        <div ref={textRef}>
           <p className="text-sm uppercase tracking-widest text-accent">
             {product.category}
           </p>

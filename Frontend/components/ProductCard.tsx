@@ -12,7 +12,10 @@ export default function ProductCard({ product }: { product: Product }) {
     const el = imageRef.current;
     if (!el) return;
 
+    // Measure the frame, not the hover-scaled image inside it.
     const rect = el.getBoundingClientRect();
+    const src = el.querySelector("img")?.currentSrc ?? product.image;
+
     sessionStorage.setItem(
       `freyya:flip:${product.id}`,
       JSON.stringify({
@@ -20,15 +23,17 @@ export default function ProductCard({ product }: { product: Product }) {
         left: rect.left,
         width: rect.width,
         height: rect.height,
+        src,
+        color: product.color,
+        at: Date.now(),
       })
     );
   };
 
   return (
     <Link href={`/shop/${product.id}`} onClick={handleClick} className="group block">
-      <div className="aspect-[4/5] w-full overflow-hidden">
+      <div ref={imageRef} className="aspect-[4/5] w-full overflow-hidden">
         <div
-          ref={imageRef}
           className="relative h-full w-full transition-transform duration-500 ease-out group-hover:scale-105"
           style={{ background: product.color }}
         >
