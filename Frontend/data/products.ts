@@ -11,6 +11,12 @@ export const products: Product[] = [
     price: 28,
     specs: ["Cleanser", "150ml", "All skin types"],
     color: "#E8C4B8",
+    image: "/products/dawn-cleanse.jpg",
+    showcase: [
+      "/showcase/dawn-cleanse-1.jpg",
+      "/products/dawn-cleanse.jpg",
+      "/showcase/dawn-cleanse-3.jpg",
+    ],
   },
   {
     id: "golden-hour-serum",
@@ -22,6 +28,12 @@ export const products: Product[] = [
     price: 58,
     specs: ["Serum", "30ml", "All skin types"],
     color: "#C9A876",
+    image: "/products/golden-hour-serum.jpg",
+    showcase: [
+      "/showcase/golden-hour-serum-1.jpg",
+      "/products/golden-hour-serum.jpg",
+      "/showcase/golden-hour-serum-3.jpg",
+    ],
     isHero: true,
   },
   {
@@ -34,6 +46,12 @@ export const products: Product[] = [
     price: 42,
     specs: ["Moisturizer", "50ml", "All skin types"],
     color: "#EDE0D4",
+    image: "/products/second-skin-cream.jpg",
+    showcase: [
+      "/showcase/second-skin-cream-1.jpg",
+      "/products/second-skin-cream.jpg",
+      "/showcase/second-skin-cream-3.jpg",
+    ],
   },
   {
     id: "veil-spf",
@@ -45,6 +63,7 @@ export const products: Product[] = [
     price: 36,
     specs: ["SPF 50", "40ml", "All skin types"],
     color: "#F4E9DD",
+    image: "/products/veil-spf.jpg",
   },
   {
     id: "freyya-balm",
@@ -56,11 +75,12 @@ export const products: Product[] = [
     price: 24,
     specs: ["Lip Balm", "4.5g", "4 shades"],
     color: "#B97572",
+    image: "/products/freyya-balm-bare.jpg",
     variants: [
-      { id: "bare", name: "Bare", hex: "#D8A798", undertone: "neutral", intensity: "subtle" },
-      { id: "petal", name: "Petal", hex: "#E8B4B8", undertone: "cool", intensity: "subtle" },
-      { id: "rosewood", name: "Rosewood", hex: "#B97572", undertone: "cool", intensity: "bold" },
-      { id: "terracotta", name: "Terracotta", hex: "#C1694F", undertone: "warm", intensity: "bold" },
+      { id: "bare", name: "Bare", hex: "#D8A798", image: "/products/freyya-balm-bare.jpg", undertone: "neutral", intensity: "subtle" },
+      { id: "petal", name: "Petal", hex: "#E8B4B8", image: "/products/freyya-balm-petal.jpg", undertone: "cool", intensity: "subtle" },
+      { id: "rosewood", name: "Rosewood", hex: "#B97572", image: "/products/freyya-balm-rosewood.jpg", undertone: "cool", intensity: "bold" },
+      { id: "terracotta", name: "Terracotta", hex: "#C1694F", image: "/products/freyya-balm-terracotta.jpg", undertone: "warm", intensity: "bold" },
     ],
   },
   {
@@ -73,11 +93,12 @@ export const products: Product[] = [
     price: 32,
     specs: ["Highlighter", "15ml", "4 shades"],
     color: "#D4B483",
+    image: "/products/dew-drops-moonlight.jpg",
     variants: [
-      { id: "moonlight", name: "Moonlight", hex: "#F0EAE2", undertone: "cool", intensity: "subtle" },
-      { id: "champagne", name: "Champagne", hex: "#D4B483", undertone: "warm", intensity: "subtle" },
-      { id: "rose-gold", name: "Rose Gold", hex: "#D9A996", undertone: "neutral", intensity: "bold" },
-      { id: "bronze", name: "Bronze", hex: "#A97452", undertone: "warm", intensity: "bold" },
+      { id: "moonlight", name: "Moonlight", hex: "#F0EAE2", image: "/products/dew-drops-moonlight.jpg", undertone: "cool", intensity: "subtle" },
+      { id: "champagne", name: "Champagne", hex: "#D4B483", image: "/products/dew-drops-champagne.jpg", undertone: "warm", intensity: "subtle" },
+      { id: "rose-gold", name: "Rose Gold", hex: "#D9A996", image: "/products/dew-drops-rose-gold.jpg", undertone: "neutral", intensity: "bold" },
+      { id: "bronze", name: "Bronze", hex: "#A97452", image: "/products/dew-drops-bronze.jpg", undertone: "warm", intensity: "bold" },
     ],
   },
 ];

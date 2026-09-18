@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -95,9 +96,17 @@ export default function Quiz() {
                 Your match
               </p>
               <div
-                className="mx-auto mt-6 h-24 w-24 rounded-full"
+                className="relative mx-auto mt-6 h-52 w-40 overflow-hidden"
                 style={{ background: resultVariant.hex }}
-              />
+              >
+                <Image
+                  src={resultVariant.image}
+                  alt={`${resultProduct.name} in ${resultVariant.name}`}
+                  fill
+                  sizes="160px"
+                  className="object-cover"
+                />
+              </div>
               <h1 className="mt-6 font-serif text-3xl text-text sm:text-4xl">
                 {resultVariant.name}
               </h1>

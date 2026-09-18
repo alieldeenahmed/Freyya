@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef } from "react";
 import type { Product } from "@/lib/types";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
@@ -65,18 +66,20 @@ export default function ProductShowcase({ product }: { product: Product }) {
                 className="absolute inset-0 flex items-end p-6"
                 style={{
                   opacity: i === 0 ? 1 : 0,
-                  background: `linear-gradient(160deg, ${product.color}${
-                    i === 0 ? "" : "cc"
-                  }, var(--color-base))`,
-                  filter:
-                    i === 1
-                      ? "saturate(1.3)"
-                      : i === 2
-                        ? "brightness(0.9)"
-                        : undefined,
+                  background: product.color,
                 }}
               >
-                <span className="text-xs uppercase tracking-widest text-text/60">
+                {product.showcase?.[i] && (
+                  <Image
+                    src={product.showcase[i]}
+                    alt={`${product.name} — ${caption}`}
+                    fill
+                    sizes="(min-width: 1152px) 552px, (min-width: 640px) 45vw, 100vw"
+                    className="object-cover"
+                  />
+                )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-text/45 to-transparent" />
+                <span className="relative text-xs uppercase tracking-widest text-base">
                   {caption}
                 </span>
               </div>

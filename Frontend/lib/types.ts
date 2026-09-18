@@ -13,6 +13,7 @@ export interface ProductVariant {
   id: string;
   name: string;
   hex: string;
+  image: string;
   undertone: Undertone;
   intensity: Intensity;
 }
@@ -26,6 +27,8 @@ export interface Product {
   price: number;
   specs: string[];
   color: string;
+  image: string;
+  showcase?: string[];
   isHero?: boolean;
   variants?: ProductVariant[];
 }

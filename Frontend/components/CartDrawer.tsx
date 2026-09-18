@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -57,9 +58,17 @@ export default function CartDrawer() {
             {items.map((item) => (
               <div key={item.id} className="flex gap-4">
                 <div
-                  className="h-20 w-16 flex-shrink-0"
+                  className="relative h-20 w-16 flex-shrink-0 overflow-hidden"
                   style={{ background: item.color }}
-                />
+                >
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                </div>
                 <div className="flex-1">
                   <p className="font-serif text-lg text-text">{item.name}</p>
                   {item.variantName && (

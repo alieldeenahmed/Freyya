@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
@@ -18,6 +19,8 @@ export default function ProductDetail({ product }: { product: Product }) {
   useMagnetic(addButtonRef, 0.25);
 
   const activeColor = selectedVariant?.hex ?? product.color;
+  const activeImage = selectedVariant?.image ?? product.image;
+  const gallery = product.variants?.map((v) => v.image) ?? [product.image];
 
   const handleAddToBag = () => {
     addItem({
@@ -28,6 +31,7 @@ export default function ProductDetail({ product }: { product: Product }) {
       variantName: selectedVariant?.name,
       price: product.price,
       color: activeColor,
+      image: activeImage,
     });
 
     setJustAdded(true);
@@ -90,11 +94,27 @@ export default function ProductDetail({ product }: { product: Product }) {
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 sm:grid-cols-2">
         <div
           ref={imageRef}
-          className="aspect-[4/5] w-full transition-colors duration-500"
-          style={{
-            background: `linear-gradient(160deg, ${activeColor}, var(--color-base))`,
-          }}
-        />
+          className="relative aspect-[4/5] w-full overflow-hidden"
+          style={{ background: activeColor }}
+        >
+          {gallery.map((src, i) => (
+            <Image
+              key={src}
+              src={src}
+              alt={
+                product.variants
+                  ? `${product.name} in ${product.variants[i].name}`
+                  : product.name
+              }
+              fill
+              priority={i === 0}
+              sizes="(min-width: 1024px) 512px, (min-width: 640px) 45vw, 100vw"
+              className={`object-cover transition-opacity duration-500 ${
+                src === activeImage ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          ))}
+        </div>
 
         <div>
           <p className="text-sm uppercase tracking-widest text-accent">

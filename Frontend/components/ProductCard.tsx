@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRef } from "react";
 import type { Product } from "@/lib/types";
@@ -28,11 +29,17 @@ export default function ProductCard({ product }: { product: Product }) {
       <div className="aspect-[4/5] w-full overflow-hidden">
         <div
           ref={imageRef}
-          className="h-full w-full transition-transform duration-500 ease-out group-hover:scale-105"
-          style={{
-            background: `linear-gradient(160deg, ${product.color}, var(--color-base))`,
-          }}
-        />
+          className="relative h-full w-full transition-transform duration-500 ease-out group-hover:scale-105"
+          style={{ background: product.color }}
+        >
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            sizes="(min-width: 1024px) 384px, (min-width: 640px) 45vw, 100vw"
+            className="object-cover"
+          />
+        </div>
       </div>
       <div className="mt-4">
         <p className="text-xs uppercase tracking-widest text-text/50">
