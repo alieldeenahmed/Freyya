@@ -1,20 +1,25 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import {
+  EMPTY_CART,
+  addToCart,
+  clearCart,
+  getCartItems,
+  removeFromCart,
+  setCartQuantity,
+  subscribeCart,
+  type CartItem,
+} from "@/lib/cart-store";
 
-export interface CartItem {
-  id: string;
-  productId: string;
-  variantId?: string;
-  name: string;
-  variantName?: string;
-  price: number;
-  color: string;
-  image: string;
-  stock: number;
-  quantity: number;
-}
-
+export type { CartItem };
 export type AddedNotice = Omit<CartItem, "quantity"> & { stamp: number };
 
 interface CartContextValue {
@@ -26,6 +31,7 @@ interface CartContextValue {
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  clear: () => void;
   open: () => void;
   close: () => void;
 }
@@ -33,39 +39,18 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  // The cart lives in localStorage, so it survives reloads and syncs across tabs.
+  const items = useSyncExternalStore(subscribeCart, getCartItems, () => EMPTY_CART);
   const [isOpen, setIsOpen] = useState(false);
   const [lastAdded, setLastAdded] = useState<AddedNotice | null>(null);
 
   const clearLastAdded = useCallback(() => setLastAdded(null), []);
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => setIsOpen(false), []);
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
     setLastAdded({ ...item, stamp: Date.now() });
-    setItems((prev) => {
-      const existing = prev.find((i) => i.id === item.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.id === item.id
-            ? { ...i, quantity: Math.min(i.quantity + 1, i.stock) }
-            : i
-        );
-      }
-      return item.stock > 0 ? [...prev, { ...item, quantity: 1 }] : prev;
-    });
-  }, []);
-
-  const removeItem = useCallback((id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-  }, []);
-
-  const updateQuantity = useCallback((id: string, quantity: number) => {
-    setItems((prev) =>
-      quantity <= 0
-        ? prev.filter((i) => i.id !== id)
-        : prev.map((i) =>
-            i.id === id ? { ...i, quantity: Math.min(quantity, i.stock) } : i
-          )
-    );
+    addToCart(item);
   }, []);
 
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -79,10 +64,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         lastAdded,
         clearLastAdded,
         addItem,
-        removeItem,
-        updateQuantity,
-        open: () => setIsOpen(true),
-        close: () => setIsOpen(false),
+        removeItem: removeFromCart,
+        updateQuantity: setCartQuantity,
+        clear: clearCart,
+        open,
+        close,
       }}
     >
       {children}

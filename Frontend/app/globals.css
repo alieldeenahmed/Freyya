@@ -24,6 +24,18 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Visible keyboard focus in the brand's gold; form fields show theirs via the underline. */
+:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 .skeleton {
   background-color: color-mix(in srgb, var(--color-secondary) 22%, var(--color-base));
   background-image: linear-gradient(
