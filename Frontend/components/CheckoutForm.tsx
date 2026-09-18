@@ -236,6 +236,16 @@ export default function CheckoutForm() {
                 );
               })}
             </div>
+            <p className="mt-4 text-xs text-text/65">
+              See{" "}
+              <Link
+                href="/shipping-returns"
+                className="border-b border-accent text-text transition-colors hover:text-accent-deep"
+              >
+                shipping &amp; returns
+              </Link>{" "}
+              for countries, times and how to send something back.
+            </p>
           </section>
 
           <section>

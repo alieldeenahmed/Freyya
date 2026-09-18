@@ -14,6 +14,7 @@ Freyya is a storefront for a six-product skincare line. It is built with Next.js
 - **A persistent bag.** The cart survives reloads and stays in sync across tabs. Quantities are capped at stock.
 - **A demo checkout.** Contact, delivery, shipping method and an order confirmation page. No payment is taken and no card data is collected.
 - **An accessible cart drawer.** It behaves like a real modal dialog: focus moves in, stays in, and returns when it closes.
+- **Help pages.** Contact, shipping and returns, privacy and terms. The shipping page reads its prices and countries from the same data as checkout, so the two can't disagree.
 - **Search-ready pages.** Per-page metadata, share images, product structured data, a sitemap and `robots.txt`.
 
 |  |  |
@@ -56,6 +57,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Purpose |
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | The public address, for example `https://freyya.example`. Used for the sitemap and share links. Falls back to the Vercel production URL, then to `http://localhost:3000`. |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Optional. When set, the contact page also shows this address as a mail link. |
 
 ## How it works
 

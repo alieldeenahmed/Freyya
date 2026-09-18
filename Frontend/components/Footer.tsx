@@ -7,6 +7,13 @@ const EXPLORE = [
   { href: "/about", label: "About" },
 ];
 
+const HELP = [
+  { href: "/contact", label: "Contact" },
+  { href: "/shipping-returns", label: "Shipping & returns" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+];
+
 const linkClass = "text-sm text-text/70 transition-colors hover:text-accent-deep";
 
 export default function Footer() {
@@ -15,7 +22,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-secondary/40 px-6 py-16 sm:px-10">
       <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr] lg:gap-20">
+        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:gap-16">
           <div>
             <p className="font-serif text-3xl text-text">Freyya</p>
             <p className="mt-4 max-w-xs text-sm text-text/70">
@@ -27,6 +34,19 @@ export default function Footer() {
             <h2 className="text-xs uppercase tracking-widest text-text/65">Explore</h2>
             <ul className="mt-5 space-y-3">
               {EXPLORE.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={linkClass}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Help">
+            <h2 className="text-xs uppercase tracking-widest text-text/65">Help</h2>
+            <ul className="mt-5 space-y-3">
+              {HELP.map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className={linkClass}>
                     {link.label}
