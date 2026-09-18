@@ -32,7 +32,7 @@ export default function AboutPage() {
     <>
       <section className="px-6 pb-20 pt-24 sm:px-10 sm:pb-28 sm:pt-32">
         <Reveal className="mx-auto max-w-4xl">
-          <p className="text-sm uppercase tracking-widest text-accent">About</p>
+          <p className="text-sm uppercase tracking-widest text-accent-deep">About</p>
           <h1 className="mt-4 font-serif text-5xl leading-tight text-text sm:text-7xl">
             Skincare without the noise.
           </h1>
@@ -59,7 +59,7 @@ export default function AboutPage() {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <p className="text-sm uppercase tracking-widest text-accent">
+            <p className="text-sm uppercase tracking-widest text-accent-deep">
               The name
             </p>
             <h2 className="mt-3 font-serif text-4xl text-text sm:text-5xl">
@@ -80,7 +80,7 @@ export default function AboutPage() {
       <section className="border-t border-secondary/40 px-6 py-24 sm:px-10 sm:py-32">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <p className="text-sm uppercase tracking-widest text-accent">
+            <p className="text-sm uppercase tracking-widest text-accent-deep">
               Ingredients
             </p>
             <h2 className="mt-3 font-serif text-4xl text-text sm:text-5xl">
@@ -94,14 +94,14 @@ export default function AboutPage() {
 
           <div className="mt-16 grid grid-cols-1 gap-12 sm:grid-cols-2 sm:gap-20">
             <Reveal>
-              <h3 className="text-xs uppercase tracking-widest text-text/50">
+              <h3 className="text-xs uppercase tracking-widest text-text/65">
                 Left out
               </h3>
               <ul className="mt-4">
                 {LEFT_OUT.map((item) => (
                   <li
                     key={item}
-                    className="border-b border-secondary/40 py-4 font-serif text-2xl text-text/60"
+                    className="border-b border-secondary/40 py-4 font-serif text-2xl text-text/65"
                   >
                     {item}
                   </li>
@@ -110,7 +110,7 @@ export default function AboutPage() {
             </Reveal>
 
             <Reveal delay={0.1}>
-              <h3 className="text-xs uppercase tracking-widest text-text/50">
+              <h3 className="text-xs uppercase tracking-widest text-text/65">
                 Kept in
               </h3>
               <ul className="mt-4">
@@ -141,13 +141,13 @@ export default function AboutPage() {
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               href="/quiz"
-              className="border border-text px-8 py-3 text-sm uppercase tracking-widest text-text transition-colors hover:border-accent hover:text-accent"
+              className="border border-text px-8 py-3 text-sm uppercase tracking-widest text-text transition-colors hover:border-accent hover:text-accent-deep"
             >
               Shade match
             </Link>
             <Link
               href="/shop"
-              className="px-8 py-3 text-sm uppercase tracking-widest text-text/60 transition-colors hover:text-accent"
+              className="px-8 py-3 text-sm uppercase tracking-widest text-text/65 transition-colors hover:text-accent-deep"
             >
               Shop all
             </Link>

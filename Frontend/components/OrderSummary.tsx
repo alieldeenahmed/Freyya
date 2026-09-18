@@ -33,7 +33,7 @@ export default function OrderSummary({
             <div className="min-w-0 flex-1">
               <p className="font-serif text-lg leading-tight text-text">{item.name}</p>
               {item.variantName && (
-                <p className="mt-1 text-xs uppercase tracking-wide text-text/50">
+                <p className="mt-1 text-xs uppercase tracking-wide text-text/65">
                   {item.variantName}
                 </p>
               )}
@@ -59,7 +59,7 @@ export default function OrderSummary({
       </dl>
 
       {showFreeShippingHint && remaining > 0 && (
-        <p className="mt-6 text-xs text-text/50">
+        <p className="mt-6 text-xs text-text/65">
           Add ${remaining} more for free standard shipping.
         </p>
       )}

@@ -78,7 +78,7 @@ export default function Header() {
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={`group relative py-2 text-xs uppercase tracking-[0.2em] transition-colors hover:text-text ${
-                  active ? "text-text" : "text-text/60"
+                  active ? "text-text" : "text-text/65"
                 }`}
               >
                 {link.label}
@@ -98,7 +98,7 @@ export default function Header() {
             onClick={() => setIsMenuOpen((v) => !v)}
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMenuOpen}
-            className="flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent sm:hidden"
+            className="flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent-deep sm:hidden"
           >
             <svg
               width="24"
@@ -119,7 +119,7 @@ export default function Header() {
             onClick={open}
             data-cart-button
             aria-label="Cart"
-            className="relative flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent"
+            className="relative flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent-deep"
           >
             <svg
               width="24"
@@ -155,8 +155,8 @@ export default function Header() {
             href={link.href}
             onClick={closeMenu}
             aria-current={isActive(link.href) ? "page" : undefined}
-            className={`py-3 text-xs uppercase tracking-[0.2em] transition-colors hover:text-accent ${
-              isActive(link.href) ? "text-text" : "text-text/60"
+            className={`py-3 text-xs uppercase tracking-[0.2em] transition-colors hover:text-accent-deep ${
+              isActive(link.href) ? "text-text" : "text-text/65"
             }`}
           >
             {link.label}

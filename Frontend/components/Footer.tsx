@@ -1,10 +1,58 @@
+import Link from "next/link";
+import { getAllProducts } from "@/lib/products";
+
+const EXPLORE = [
+  { href: "/shop", label: "Shop all" },
+  { href: "/quiz", label: "Find your shade" },
+  { href: "/about", label: "About" },
+];
+
+const linkClass = "text-sm text-text/70 transition-colors hover:text-accent-deep";
+
 export default function Footer() {
+  const products = getAllProducts();
+
   return (
-    <footer className="border-t border-secondary/40 px-6 py-10 sm:px-10">
-      <div className="flex flex-col gap-4 text-sm text-text/70 sm:flex-row sm:items-center sm:justify-between">
-        <p className="font-serif text-lg text-text">Freyya</p>
-        <p>Formulated with intention. Nothing else.</p>
-        <p>&copy; {new Date().getFullYear()} Freyya</p>
+    <footer className="border-t border-secondary/40 px-6 py-16 sm:px-10">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr] lg:gap-20">
+          <div>
+            <p className="font-serif text-3xl text-text">Freyya</p>
+            <p className="mt-4 max-w-xs text-sm text-text/70">
+              Formulated with intention. Nothing else.
+            </p>
+          </div>
+
+          <nav aria-label="Explore">
+            <h2 className="text-xs uppercase tracking-widest text-text/65">Explore</h2>
+            <ul className="mt-5 space-y-3">
+              {EXPLORE.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={linkClass}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Products">
+            <h2 className="text-xs uppercase tracking-widest text-text/65">The six</h2>
+            <ul className="mt-5 space-y-3">
+              {products.map((product) => (
+                <li key={product.id}>
+                  <Link href={`/shop/${product.id}`} className={linkClass}>
+                    {product.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+
+        <p className="mt-16 border-t border-secondary/40 pt-6 text-xs text-text/65">
+          &copy; {new Date().getFullYear()} Freyya
+        </p>
       </div>
     </footer>
   );

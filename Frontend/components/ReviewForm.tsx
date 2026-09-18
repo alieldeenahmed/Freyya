@@ -9,8 +9,8 @@ const LIMITS = { titleMin: 3, titleMax: 60, bodyMin: 20, bodyMax: 600, nameMin: 
 type Errors = Partial<Record<"rating" | "title" | "body" | "name", string>>;
 
 const fieldClass =
-  "w-full border-0 border-b border-secondary/60 bg-transparent py-3 text-text placeholder:text-text/30 transition-colors focus:border-accent focus:outline-none";
-const labelClass = "text-[11px] uppercase tracking-[0.2em] text-text/60";
+  "w-full border-0 border-b border-secondary/60 bg-transparent py-3 text-text placeholder:text-text/65 transition-colors focus:border-accent focus:outline-none";
+const labelClass = "text-[11px] uppercase tracking-[0.2em] text-text/65";
 
 function StarInput({
   value,
@@ -54,12 +54,12 @@ function StarInput({
         >
           <Star
             className={`h-7 w-7 transition-colors duration-200 ${
-              n <= active ? "text-accent" : "text-secondary/60"
+              n <= active ? "text-accent-deep" : "text-secondary/60"
             }`}
           />
         </button>
       ))}
-      <span className="ml-3 text-[11px] uppercase tracking-[0.2em] text-text/50">
+      <span className="ml-3 text-[11px] uppercase tracking-[0.2em] text-text/65">
         {["", "Poor", "Fair", "Good", "Very good", "Excellent"][active]}
       </span>
     </div>
@@ -117,7 +117,7 @@ export default function ReviewForm({
 
   const error = (key: keyof Errors) =>
     errors[key] ? (
-      <p role="alert" className="mt-2 text-xs text-accent">
+      <p role="alert" className="mt-2 text-xs text-accent-deep">
         {errors[key]}
       </p>
     ) : null;
@@ -161,7 +161,7 @@ export default function ReviewForm({
           <label htmlFor="review-body" className={labelClass}>
             Review
           </label>
-          <span className="text-[11px] tabular-nums text-text/40">
+          <span className="text-[11px] tabular-nums text-text/65">
             {body.length}/{LIMITS.bodyMax}
           </span>
         </div>
@@ -200,7 +200,7 @@ export default function ReviewForm({
         {shades && shades.length > 0 && (
           <div>
             <label htmlFor="review-shade" className={labelClass}>
-              Shade <span className="text-text/40">(optional)</span>
+              Shade <span className="text-text/65">(optional)</span>
             </label>
             <select
               id="review-shade"
@@ -229,13 +229,13 @@ export default function ReviewForm({
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs uppercase tracking-[0.2em] text-text/60 transition-colors hover:text-text"
+          className="text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
         >
           Cancel
         </button>
       </div>
 
-      <p className="mt-6 text-[11px] leading-relaxed text-text/40">
+      <p className="mt-6 text-[11px] leading-relaxed text-text/65">
         Your review is saved on this device and appears right away.
       </p>
     </form>

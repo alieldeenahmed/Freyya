@@ -25,7 +25,7 @@ export default function ProductAccordion({ details }: { details: ProductDetails 
           {details.skinTypes.map((type) => (
             <li
               key={type}
-              className="border border-secondary/50 px-3 py-1 text-xs uppercase tracking-wide text-text/60"
+              className="border border-secondary/50 px-3 py-1 text-xs uppercase tracking-wide text-text/65"
             >
               {type}
             </li>
@@ -67,12 +67,12 @@ export default function ProductAccordion({ details }: { details: ProductDetails 
               aria-controls={panelId}
               className="group flex w-full items-center justify-between py-5 text-left"
             >
-              <span className="text-xs uppercase tracking-[0.2em] text-text transition-colors group-hover:text-accent">
+              <span className="text-xs uppercase tracking-[0.2em] text-text transition-colors group-hover:text-accent-deep">
                 {section.label}
               </span>
               <span
                 aria-hidden
-                className="relative h-3 w-3 text-text/60 transition-colors group-hover:text-accent"
+                className="relative h-3 w-3 text-text/65 transition-colors group-hover:text-accent-deep"
               >
                 <span className="absolute left-0 top-1/2 h-px w-3 -translate-y-1/2 bg-current" />
                 <span

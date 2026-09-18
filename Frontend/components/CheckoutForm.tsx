@@ -32,7 +32,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function SectionHeading({ number, title }: { number: string; title: string }) {
   return (
     <h2 className="flex items-baseline gap-4 border-b border-secondary/40 pb-4">
-      <span className="font-serif text-2xl text-accent">{number}</span>
+      <span className="font-serif text-2xl text-accent-deep">{number}</span>
       <span className="font-serif text-2xl text-text">{title}</span>
     </h2>
   );
@@ -128,12 +128,12 @@ export default function CheckoutForm() {
     return (
       <div className="mx-auto max-w-6xl">
         <h1 className="font-serif text-4xl text-text sm:text-5xl">Checkout</h1>
-        <p className="mt-6 max-w-sm text-text/60">
+        <p className="mt-6 max-w-sm text-text/65">
           Your bag is empty. Add something you love and it will be waiting here.
         </p>
         <Link
           href="/shop"
-          className="mt-8 inline-block border border-text px-8 py-3 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:border-accent hover:text-accent"
+          className="mt-8 inline-block border border-text px-8 py-3 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:border-accent hover:text-accent-deep"
         >
           Shop all
         </Link>
@@ -143,7 +143,7 @@ export default function CheckoutForm() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <p className="text-sm uppercase tracking-widest text-accent">Secure your order</p>
+      <p className="text-sm uppercase tracking-widest text-accent-deep">Secure your order</p>
       <h1 className="mt-3 font-serif text-4xl text-text sm:text-5xl">Checkout</h1>
 
       <div className="mt-14 grid grid-cols-1 gap-16 lg:grid-cols-[1fr_400px] lg:gap-24">
@@ -228,7 +228,7 @@ export default function CheckoutForm() {
                       </span>
                       <span>
                         <span className="block text-sm text-text">{method.label}</span>
-                        <span className="block text-xs text-text/50">{method.eta}</span>
+                        <span className="block text-xs text-text/65">{method.eta}</span>
                       </span>
                     </span>
                     <span className="text-sm text-text/80">{cost === 0 ? "Free" : `$${cost}`}</span>
@@ -256,7 +256,7 @@ export default function CheckoutForm() {
             >
               {placing ? "Placing order…" : `Place order · $${totals.total}`}
             </button>
-            <p className="mt-4 text-[11px] leading-relaxed text-text/40">
+            <p className="mt-4 text-[11px] leading-relaxed text-text/65">
               Demo order: nothing is charged, shipped or emailed.
             </p>
           </div>
@@ -269,7 +269,7 @@ export default function CheckoutForm() {
           </div>
           <Link
             href="/shop"
-            className="mt-6 inline-block text-xs uppercase tracking-[0.2em] text-text/60 transition-colors hover:text-text"
+            className="mt-6 inline-block text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
           >
             ← Keep shopping
           </Link>

@@ -32,7 +32,7 @@ export default function StarRating({
               className="absolute inset-y-0 left-0 overflow-hidden"
               style={{ width: `${fill * 100}%` }}
             >
-              <Star className={`${size} max-w-none text-accent`} />
+              <Star className={`${size} max-w-none text-accent-deep`} />
             </span>
           </span>
         );

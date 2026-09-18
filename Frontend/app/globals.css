@@ -3,6 +3,8 @@
 :root {
   --color-base: #f7f3ee;
   --color-accent: #c9a876;
+  /* Gold for small text on cream; the base accent is too pale to read there. */
+  --color-accent-deep: #7f6030;
   --color-secondary: #e8c4b8;
   --color-text: #2b2420;
   --color-glow: rgba(255, 250, 240, 0.6);
@@ -11,6 +13,7 @@
 @theme inline {
   --color-base: var(--color-base);
   --color-accent: var(--color-accent);
+  --color-accent-deep: var(--color-accent-deep);
   --color-secondary: var(--color-secondary);
   --color-text: var(--color-text);
   --color-glow: var(--color-glow);

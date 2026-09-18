@@ -44,10 +44,10 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
       <div className="mt-4">
-        <p className="text-xs uppercase tracking-widest text-text/50">
+        <p className="text-xs uppercase tracking-widest text-text/65">
           {product.category}
         </p>
-        <h3 className="mt-1 font-serif text-xl text-text transition-colors group-hover:text-accent">
+        <h3 className="mt-1 font-serif text-xl text-text transition-colors group-hover:text-accent-deep">
           {product.name}
         </h3>
         <p className="mt-1 text-sm text-text/70">${product.price}</p>

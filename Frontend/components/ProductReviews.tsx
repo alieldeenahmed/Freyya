@@ -76,7 +76,7 @@ export default function ProductReviews({
   }, [justPosted]);
 
   const trigger = hasReviewed ? (
-    <p className="mt-10 max-w-[16rem] text-xs leading-relaxed text-text/50">
+    <p className="mt-10 max-w-[16rem] text-xs leading-relaxed text-text/65">
       Thank you for reviewing. Your review is saved on this device.
     </p>
   ) : (
@@ -84,7 +84,7 @@ export default function ProductReviews({
       type="button"
       onClick={openForm}
       aria-expanded={formOpen}
-      className="mt-10 border border-text px-8 py-3 text-xs uppercase tracking-[0.2em] text-text transition-colors duration-300 hover:border-accent hover:text-accent"
+      className="mt-10 border border-text px-8 py-3 text-xs uppercase tracking-[0.2em] text-text transition-colors duration-300 hover:border-accent hover:text-accent-deep"
     >
       Write a review
     </button>
@@ -117,7 +117,7 @@ export default function ProductReviews({
     >
       <div className="mx-auto max-w-6xl">
         <Reveal>
-          <p className="text-sm uppercase tracking-widest text-accent">Reviews</p>
+          <p className="text-sm uppercase tracking-widest text-accent-deep">Reviews</p>
           <h2 className="mt-3 font-serif text-4xl text-text sm:text-5xl">
             In their words.
           </h2>
@@ -125,7 +125,7 @@ export default function ProductReviews({
 
         {reviews.length === 0 ? (
           <div className="mt-10 max-w-xl">
-            <p className="text-text/60">
+            <p className="text-text/65">
               No reviews for {productName} yet. Be the first to share yours.
             </p>
             {trigger}
@@ -140,7 +140,7 @@ export default function ProductReviews({
                 </span>
                 <div className="pb-2">
                   <StarRating rating={summary.average} />
-                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-text/50">
+                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-text/65">
                     {summary.count} {summary.count === 1 ? "review" : "reviews"}
                   </p>
                 </div>
@@ -151,7 +151,7 @@ export default function ProductReviews({
                   const count = summary.distribution[star];
                   const pct = summary.count ? (count / summary.count) * 100 : 0;
                   return (
-                    <li key={star} className="flex items-center gap-4 text-xs text-text/60">
+                    <li key={star} className="flex items-center gap-4 text-xs text-text/65">
                       <span className="w-3 tabular-nums">{star}</span>
                       <span className="relative h-px flex-1 bg-secondary/50">
                         <span
@@ -185,13 +185,13 @@ export default function ProductReviews({
                     <p className="mt-3 max-w-xl text-sm leading-relaxed text-text/70">
                       {review.body}
                     </p>
-                    <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] uppercase tracking-[0.18em] text-text/50">
+                    <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] uppercase tracking-[0.18em] text-text/65">
                       <span className="text-text/70">{review.author}</span>
                       {review.mine ? (
-                        <span className="text-accent">Your review</span>
+                        <span className="text-accent-deep">Your review</span>
                       ) : (
                         review.verified && (
-                          <span className="text-accent">Verified buyer</span>
+                          <span className="text-accent-deep">Verified buyer</span>
                         )
                       )}
                       {review.variant && <span>Shade: {review.variant}</span>}
@@ -200,7 +200,7 @@ export default function ProductReviews({
                         <button
                           type="button"
                           onClick={() => removeUserReview(review.id)}
-                          className="text-text/40 transition-colors hover:text-text"
+                          className="text-text/65 transition-colors hover:text-text"
                         >
                           Remove
                         </button>
@@ -214,7 +214,7 @@ export default function ProductReviews({
                 <button
                   type="button"
                   onClick={() => setShowAll((v) => !v)}
-                  className="mt-8 border-b border-accent pb-0.5 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:text-accent"
+                  className="mt-8 border-b border-accent pb-0.5 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
                 >
                   {showAll ? "Show fewer" : `Show all ${reviews.length} reviews`}
                 </button>

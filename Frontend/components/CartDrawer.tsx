@@ -115,14 +115,14 @@ export default function CartDrawer() {
             type="button"
             onClick={close}
             aria-label="Close cart"
-            className="flex h-11 w-11 items-center justify-center text-text/60 transition-colors hover:text-accent"
+            className="flex h-11 w-11 items-center justify-center text-text/65 transition-colors hover:text-accent-deep"
           >
             ✕
           </button>
         </div>
 
         {items.length === 0 ? (
-          <p className="mt-8 text-sm text-text/60">Your bag is empty.</p>
+          <p className="mt-8 text-sm text-text/65">Your bag is empty.</p>
         ) : (
           <div className="mt-6 flex-1 space-y-6 overflow-y-auto overscroll-contain">
             {items.map((item) => (
@@ -139,13 +139,13 @@ export default function CartDrawer() {
                 <div className="flex-1">
                   <p className="font-serif text-lg text-text">{item.name}</p>
                   {item.variantName && (
-                    <p className="text-xs uppercase tracking-wide text-text/50">
+                    <p className="text-xs uppercase tracking-wide text-text/65">
                       {item.variantName}
                     </p>
                   )}
                   <p className="mt-1 text-sm text-text/70">${item.price}</p>
                   {item.quantity >= item.stock && (
-                    <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-accent">
+                    <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-accent-deep">
                       Maximum available
                     </p>
                   )}
@@ -155,7 +155,7 @@ export default function CartDrawer() {
                       type="button"
                       onClick={() => updateQuantity(item.id, item.quantity - 1)}
                       aria-label={`Decrease quantity of ${item.name}`}
-                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent"
+                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent-deep"
                     >
                       −
                     </button>
@@ -167,7 +167,7 @@ export default function CartDrawer() {
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
                       disabled={item.quantity >= item.stock}
                       aria-label={`Increase quantity of ${item.name}`}
-                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-secondary/50 disabled:hover:text-text/70"
+                      className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent-deep disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-secondary/50 disabled:hover:text-text/70"
                     >
                       +
                     </button>
@@ -175,7 +175,7 @@ export default function CartDrawer() {
                       type="button"
                       onClick={() => removeItem(item.id)}
                       aria-label={`Remove ${item.name} from bag`}
-                      className="ml-auto text-xs uppercase tracking-wide text-text/40 transition-colors hover:text-accent"
+                      className="ml-auto text-xs uppercase tracking-wide text-text/65 transition-colors hover:text-accent-deep"
                     >
                       Remove
                     </button>
@@ -194,7 +194,7 @@ export default function CartDrawer() {
             </div>
             <p
               className={`mt-3 text-xs ${
-                freeShippingRemaining <= 0 ? "text-accent" : "text-text/50"
+                freeShippingRemaining <= 0 ? "text-accent-deep" : "text-text/65"
               }`}
             >
               {freeShippingRemaining <= 0

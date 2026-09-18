@@ -88,21 +88,21 @@ export default function CartNotice() {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-accent">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-accent-deep">
             Added to your bag
           </p>
           <p className="mt-1 truncate font-serif text-lg leading-tight text-text">
             {lastAdded?.name}
           </p>
           {lastAdded?.variantName && (
-            <p className="mt-0.5 text-xs text-text/50">{lastAdded.variantName}</p>
+            <p className="mt-0.5 text-xs text-text/65">{lastAdded.variantName}</p>
           )}
         </div>
 
         <button
           type="button"
           onClick={handleView}
-          className="shrink-0 border-b border-accent pb-0.5 text-[10px] uppercase tracking-[0.2em] text-text transition-colors hover:text-accent"
+          className="shrink-0 border-b border-accent pb-0.5 text-[10px] uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
         >
           View bag
         </button>

@@ -64,7 +64,7 @@ export default function BrandValues() {
             }}
             className="flex gap-6 border-b border-secondary/40 py-8 last:border-b-0 sm:gap-12"
           >
-            <span className="font-serif text-2xl text-accent">
+            <span className="font-serif text-2xl text-accent-deep">
               {String(i + 1).padStart(2, "0")}
             </span>
             <div>

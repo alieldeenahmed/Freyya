@@ -227,7 +227,7 @@ export default function ProductDetail({
         </div>
 
         <div ref={textRef}>
-          <p className="text-sm uppercase tracking-widest text-accent">
+          <p className="text-sm uppercase tracking-widest text-accent-deep">
             {product.category}
           </p>
           <h1 className="mt-2 font-serif text-4xl text-text sm:text-5xl">
@@ -241,7 +241,7 @@ export default function ProductDetail({
                   .getElementById("reviews")
                   ?.scrollIntoView({ behavior: "smooth", block: "start" })
               }
-              className="group mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-text/60 transition-colors hover:text-text"
+              className="group mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-text/65 transition-colors hover:text-text"
             >
               <StarRating rating={rating.average} size="h-3.5 w-3.5" />
               <span className="border-b border-transparent pb-0.5 transition-colors group-hover:border-accent">
@@ -251,7 +251,7 @@ export default function ProductDetail({
             </button>
           )}
           <p className="mt-4 max-w-sm text-text/70">{product.tagline}</p>
-          <p className="mt-4 max-w-sm text-sm text-text/60">
+          <p className="mt-4 max-w-sm text-sm text-text/65">
             {product.description}
           </p>
 
@@ -259,7 +259,7 @@ export default function ProductDetail({
             {product.specs.map((spec) => (
               <li
                 key={spec}
-                className="border border-secondary/50 px-3 py-1 text-xs uppercase tracking-wide text-text/60"
+                className="border border-secondary/50 px-3 py-1 text-xs uppercase tracking-wide text-text/65"
               >
                 {spec}
               </li>
@@ -270,10 +270,10 @@ export default function ProductDetail({
           <p
             className={`mt-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] ${
               soldOut
-                ? "text-text/40"
+                ? "text-text/65"
                 : stock <= LOW_STOCK
-                  ? "text-accent"
-                  : "text-text/60"
+                  ? "text-accent-deep"
+                  : "text-text/65"
             }`}
           >
             <span
@@ -295,7 +295,7 @@ export default function ProductDetail({
 
           {product.variants && (
             <div className="mt-8">
-              <p className="text-xs uppercase tracking-widest text-text/50">
+              <p className="text-xs uppercase tracking-widest text-text/65">
                 Shade — {selectedVariant?.name}
               </p>
               <div className="mt-3 flex gap-3">
@@ -333,7 +333,7 @@ export default function ProductDetail({
             type="button"
             onClick={handleAddToBag}
             disabled={unavailable}
-            className="relative mt-10 block w-full max-w-sm overflow-hidden border border-text bg-text py-4 text-center text-sm uppercase tracking-[0.2em] text-base transition-colors duration-300 enabled:hover:text-accent disabled:cursor-not-allowed disabled:border-text/20 disabled:bg-transparent disabled:text-text/40"
+            className="relative mt-10 block w-full max-w-sm overflow-hidden border border-text bg-text py-4 text-center text-sm uppercase tracking-[0.2em] text-base transition-colors duration-300 enabled:hover:text-accent disabled:cursor-not-allowed disabled:border-text/20 disabled:bg-transparent disabled:text-text/65"
           >
             <span
               ref={wipeRef}
@@ -361,7 +361,7 @@ export default function ProductDetail({
           <div className="mt-8 max-w-sm">
             <Link
               href="/shop"
-              className="group inline-flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-text/60 transition-colors hover:text-text"
+              className="group inline-flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
             >
               <span
                 aria-hidden

@@ -84,7 +84,7 @@ export default function ProductShowcase({ product }: { product: Product }) {
           </div>
 
           <div>
-            <p className="text-sm uppercase tracking-widest text-accent">
+            <p className="text-sm uppercase tracking-widest text-accent-deep">
               {product.category}
             </p>
             <h2 className="mt-2 font-serif text-4xl text-text sm:text-5xl">
@@ -96,7 +96,7 @@ export default function ProductShowcase({ product }: { product: Product }) {
               {product.specs.map((spec) => (
                 <li
                   key={spec}
-                  className="border border-secondary/50 px-3 py-1 text-xs uppercase tracking-wide text-text/60"
+                  className="border border-secondary/50 px-3 py-1 text-xs uppercase tracking-wide text-text/65"
                 >
                   {spec}
                 </li>

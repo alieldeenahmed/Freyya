@@ -11,7 +11,7 @@ export default function NotFound() {
   return (
     <section className="flex flex-1 items-center px-6 py-24 sm:px-10 sm:py-32">
       <Reveal className="mx-auto w-full max-w-4xl">
-        <p className="text-sm uppercase tracking-widest text-accent">404</p>
+        <p className="text-sm uppercase tracking-widest text-accent-deep">404</p>
         <h1 className="mt-4 font-serif text-5xl leading-tight text-text sm:text-7xl">
           This page isn&apos;t here.
         </h1>
@@ -27,7 +27,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/"
-            className="text-xs uppercase tracking-[0.2em] text-text/60 transition-colors hover:text-text"
+            className="text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
           >
             Back home
           </Link>

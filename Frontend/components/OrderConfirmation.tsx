@@ -24,7 +24,7 @@ export default function OrderConfirmation() {
   return (
     <div className="mx-auto max-w-6xl">
       <Reveal>
-        <p className="text-sm uppercase tracking-widest text-accent">Order confirmed</p>
+        <p className="text-sm uppercase tracking-widest text-accent-deep">Order confirmed</p>
         <h1 className="mt-3 font-serif text-4xl text-text sm:text-6xl">
           Thank you, {firstName}.
         </h1>
@@ -32,7 +32,7 @@ export default function OrderConfirmation() {
           Your order is being prepared with care. Keep your order number close.
         </p>
         <p className="mt-8 inline-block border border-secondary/60 px-4 py-2 text-xs uppercase tracking-[0.2em] text-text">
-          <span className="text-text/50">Order </span>
+          <span className="text-text/65">Order </span>
           {order.id}
         </p>
       </Reveal>
@@ -41,7 +41,7 @@ export default function OrderConfirmation() {
         <Reveal>
           <dl className="grid grid-cols-1 gap-10 sm:grid-cols-2">
             <div>
-              <dt className="text-[11px] uppercase tracking-[0.2em] text-text/50">Delivering to</dt>
+              <dt className="text-[11px] uppercase tracking-[0.2em] text-text/65">Delivering to</dt>
               <dd className="mt-3 text-sm leading-relaxed text-text/80">
                 {order.name}
                 <br />
@@ -59,31 +59,31 @@ export default function OrderConfirmation() {
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] uppercase tracking-[0.2em] text-text/50">Shipping</dt>
+              <dt className="text-[11px] uppercase tracking-[0.2em] text-text/65">Shipping</dt>
               <dd className="mt-3 text-sm leading-relaxed text-text/80">
                 {shipping.label}
                 <br />
                 {shipping.eta}
               </dd>
-              <dt className="mt-8 text-[11px] uppercase tracking-[0.2em] text-text/50">Contact</dt>
+              <dt className="mt-8 text-[11px] uppercase tracking-[0.2em] text-text/65">Contact</dt>
               <dd className="mt-3 text-sm text-text/80">{order.email}</dd>
             </div>
           </dl>
 
-          <p className="mt-12 border-l border-accent pl-5 text-sm leading-relaxed text-text/60">
+          <p className="mt-12 border-l border-accent pl-5 text-sm leading-relaxed text-text/65">
             This was a demonstration order. Nothing was charged, shipped or emailed.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-6">
             <Link
               href="/shop"
-              className="border border-text px-8 py-3 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:border-accent hover:text-accent"
+              className="border border-text px-8 py-3 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:border-accent hover:text-accent-deep"
             >
               Continue shopping
             </Link>
             <Link
               href="/quiz"
-              className="text-xs uppercase tracking-[0.2em] text-text/60 transition-colors hover:text-text"
+              className="text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
             >
               Find your shade
             </Link>

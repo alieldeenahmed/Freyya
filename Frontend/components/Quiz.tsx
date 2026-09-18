@@ -66,7 +66,7 @@ export default function Quiz() {
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 py-24 sm:px-10">
       <div className="w-full max-w-lg">
         {!isResult && (
-          <p className="mb-8 text-center text-xs uppercase tracking-widest text-text/50">
+          <p className="mb-8 text-center text-xs uppercase tracking-widest text-text/65">
             Step {step + 1} of {QUESTIONS.length}
           </p>
         )}
@@ -83,7 +83,7 @@ export default function Quiz() {
                     key={option.id}
                     type="button"
                     onClick={() => handleSelect(QUESTIONS[step].id, option.id)}
-                    className="border border-secondary/50 px-6 py-4 text-left text-text transition-colors hover:border-accent hover:text-accent"
+                    className="border border-secondary/50 px-6 py-4 text-left text-text transition-colors hover:border-accent hover:text-accent-deep"
                   >
                     {option.label}
                   </button>
@@ -92,7 +92,7 @@ export default function Quiz() {
             </div>
           ) : resultProduct && resultVariant ? (
             <div className="text-center">
-              <p className="text-xs uppercase tracking-widest text-text/50">
+              <p className="text-xs uppercase tracking-widest text-text/65">
                 Your match
               </p>
               <div className="skeleton relative mx-auto mt-6 h-52 w-40 overflow-hidden">
@@ -112,7 +112,7 @@ export default function Quiz() {
               <Link
                 ref={shopLinkRef}
                 href={`/shop/${resultProduct.id}`}
-                className="mt-10 inline-block border border-text px-8 py-3 text-sm uppercase tracking-widest text-text transition-colors hover:border-accent hover:text-accent"
+                className="mt-10 inline-block border border-text px-8 py-3 text-sm uppercase tracking-widest text-text transition-colors hover:border-accent hover:text-accent-deep"
               >
                 Shop {resultProduct.name}
               </Link>
@@ -120,7 +120,7 @@ export default function Quiz() {
               <button
                 type="button"
                 onClick={restart}
-                className="mt-6 block w-full text-sm uppercase tracking-widest text-text/50 transition-colors hover:text-accent"
+                className="mt-6 block w-full text-sm uppercase tracking-widest text-text/65 transition-colors hover:text-accent-deep"
               >
                 Start over
               </button>
