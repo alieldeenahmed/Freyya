@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Select from "@/components/Select";
 import { Star } from "@/components/StarRating";
 import type { Review } from "@/lib/types";
 
@@ -202,19 +203,13 @@ export default function ReviewForm({
             <label htmlFor="review-shade" className={labelClass}>
               Shade <span className="text-text/65">(optional)</span>
             </label>
-            <select
+            <Select
               id="review-shade"
+              label="Shade"
+              options={[{ id: "", label: "Not specified" }, ...shades.map((s) => ({ id: s, label: s }))]}
               value={shade}
-              onChange={(e) => setShade(e.target.value)}
-              className={`${fieldClass} -ml-1 w-[calc(100%+0.25rem)]`}
-            >
-              <option value="">Not specified</option>
-              {shades.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              onChange={setShade}
+            />
           </div>
         )}
       </div>

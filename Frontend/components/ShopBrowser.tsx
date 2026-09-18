@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ProductGrid from "@/components/ProductGrid";
-import SortMenu from "@/components/SortMenu";
+import Select from "@/components/Select";
 import {
   DEFAULT_VIEW,
   GROUPS,
@@ -51,7 +51,8 @@ function ShopLayout({ products, view, onChange }: ShopLayoutProps) {
           <p role="status" className="pb-3 text-xs text-text/65">
             {visible.length} {visible.length === 1 ? "product" : "products"}
           </p>
-          <SortMenu
+          <Select
+            variant="menu"
             label="Sort by"
             options={SORTS}
             value={view.sort}

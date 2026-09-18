@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Field, fieldClass } from "@/components/Field";
+import Select from "@/components/Select";
 import { apiFetch } from "@/lib/api";
 import type { InventoryItem, StockMovement } from "@/lib/admin-types";
 import { formatDateTime } from "@/lib/format";
@@ -59,15 +60,16 @@ function StockAdjuster({ item, onDone }: { item: InventoryItem; onDone: () => vo
         />
       </Field>
       <Field id={`${id}-reason`} label="Reason">
-        <select
+        <Select
           id={`${id}-reason`}
+          label="Reason"
+          options={[
+            { id: "restock", label: "Restock" },
+            { id: "adjustment", label: "Correction" },
+          ]}
           value={reason}
-          onChange={(e) => setReason(e.target.value as "restock" | "adjustment")}
-          className={fieldClass}
-        >
-          <option value="restock">Restock</option>
-          <option value="adjustment">Correction</option>
-        </select>
+          onChange={setReason}
+        />
       </Field>
       <Field id={`${id}-note`} label="Note" optional>
         <input

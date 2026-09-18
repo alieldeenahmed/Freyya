@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Field, fieldClass } from "@/components/Field";
 import OrderSummary from "@/components/OrderSummary";
+import Select from "@/components/Select";
 import { useCart } from "@/lib/cart-context";
 import {
   describeCheckoutError,
@@ -193,19 +194,16 @@ export default function CheckoutForm() {
                 </Field>
               </div>
               <Field id="checkout-country" label="Country">
-                <select
+                <Select
                   id="checkout-country"
+                  label="Country"
+                  options={COUNTRIES.map((country) => ({ id: country, label: country }))}
                   value={fields.country}
-                  onChange={set("country")}
-                  autoComplete="country-name"
-                  className={`${fieldClass} -ml-1 w-[calc(100%+0.25rem)]`}
-                >
-                  {COUNTRIES.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(country) => {
+                    setFields((prev) => ({ ...prev, country }));
+                    resetKey();
+                  }}
+                />
               </Field>
             </div>
           </section>
