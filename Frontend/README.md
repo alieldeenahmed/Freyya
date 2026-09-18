@@ -146,4 +146,4 @@ The app lives in the `Frontend` folder of the repository. On Vercel, set **Root 
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](../LICENSE).
