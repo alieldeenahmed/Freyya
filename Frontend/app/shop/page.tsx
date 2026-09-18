@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import ProductCard from "@/components/ProductCard";
 import { getAllProducts } from "@/lib/products";
+
+export const metadata: Metadata = {
+  title: "Shop",
+  description:
+    "Cleanser, serum, cream, SPF, lip balm and highlighter. Six products, nothing extra.",
+  alternates: { canonical: "/shop" },
+};
 
 export default function ShopPage() {
   const products = getAllProducts();

@@ -5,8 +5,10 @@ import FadeImage from "@/components/FadeImage";
 import Reveal from "@/components/Reveal";
 
 export const metadata: Metadata = {
-  title: "About — Freyya",
-  description: "Six products. Each one earns its place.",
+  title: "About",
+  description:
+    "Freyya makes six products. Each one earns its place. See what we leave out and what we keep in.",
+  alternates: { canonical: "/about" },
 };
 
 const LEFT_OUT = [

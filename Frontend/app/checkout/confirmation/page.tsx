@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import OrderConfirmation from "@/components/OrderConfirmation";
 
 export const metadata: Metadata = {
-  title: "Order confirmed — Freyya",
+  title: "Order confirmed",
   robots: { index: false },
 };
 
