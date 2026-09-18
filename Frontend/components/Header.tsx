@@ -32,8 +32,8 @@ export default function Header() {
 
     gsap.fromTo(
       badge,
-      { scale: 1.6 },
-      { scale: 1, duration: 0.4, ease: "back.out(2)" }
+      { scale: 0.6, opacity: 0 },
+      { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }
     );
   }, [itemCount]);
 

@@ -33,26 +33,18 @@ export default function ProductDetail({ product }: { product: Product }) {
       image: activeImage,
     };
 
-    // Reuse the already-loaded, optimized photo for the flying thumbnail.
-    const loadedSrc =
-      imageRef.current?.querySelector<HTMLImageElement>("div.opacity-100 img")
-        ?.currentSrc || activeImage;
+    const button = addButtonRef.current;
 
-    flyToCart({
-      from: imageRef.current,
-      src: loadedSrc,
-      onArrive: () => addItem(item),
-    });
+    flyToCart({ from: button, onArrive: () => addItem(item) });
 
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1600);
 
-    const button = addButtonRef.current;
     if (button && !prefersReducedMotion()) {
       gsap.fromTo(
         button,
-        { scale: 0.98 },
-        { scale: 1, duration: 0.45, ease: "power3.out" }
+        { scale: 0.99 },
+        { scale: 1, duration: 0.6, ease: "power3.out" }
       );
     }
   };

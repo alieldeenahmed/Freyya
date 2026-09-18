@@ -1,18 +1,28 @@
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 
-const THUMB_W = 112;
-const THUMB_H = 140;
+const ORB_COUNT = 7;
+const TRAVEL = 1.05;
+const STAGGER = 0.05;
 
-// Launches a thumbnail from `from` into the header bag, then calls onArrive
-// (which should actually add the item) as it lands.
+type Point = { x: number; y: number };
+
+// A point on a quadratic curve from a to b, bent toward c.
+function curve(a: Point, c: Point, b: Point, t: number): Point {
+  const u = 1 - t;
+  return {
+    x: u * u * a.x + 2 * u * t * c.x + t * t * b.x,
+    y: u * u * a.y + 2 * u * t * c.y + t * t * b.y,
+  };
+}
+
+// A gold light leaves `from`, glides into the header bag trailing fine dust,
+// and a thin ring ripples out where it lands. onArrive adds the item.
 export function flyToCart({
   from,
-  src,
   onArrive,
 }: {
   from: HTMLElement | null;
-  src: string;
   onArrive: () => void;
 }) {
   const target = document.querySelector<HTMLElement>("[data-cart-button]");
@@ -24,61 +34,124 @@ export function flyToCart({
 
   const a = from.getBoundingClientRect();
   const b = target.getBoundingClientRect();
-  const startX = a.left + a.width / 2;
-  const startY = a.top + a.height / 2;
-  const dx = b.left + b.width / 2 - startX;
-  const dy = b.top + b.height / 2 - startY;
+  const start: Point = { x: a.left + a.width / 2, y: a.top + a.height / 2 };
+  const end: Point = { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+  // Rise first, then sweep across into the bag.
+  const bend: Point = {
+    x: start.x + (end.x - start.x) * 0.1,
+    y: end.y + (start.y - end.y) * 0.2,
+  };
 
-  const ghost = document.createElement("div");
-  Object.assign(ghost.style, {
-    position: "fixed",
-    left: `${startX - THUMB_W / 2}px`,
-    top: `${startY - THUMB_H / 2}px`,
-    width: `${THUMB_W}px`,
-    height: `${THUMB_H}px`,
-    overflow: "hidden",
-    pointerEvents: "none",
-    zIndex: "60",
-    background: "var(--color-secondary)",
-    boxShadow: "0 12px 32px rgba(43, 36, 32, 0.18)",
-    willChange: "transform, opacity",
+  const orbs = Array.from({ length: ORB_COUNT }, (_, i) => {
+    const size = 12 - i * 1.3;
+    const orb = document.createElement("div");
+    Object.assign(orb.style, {
+      position: "fixed",
+      left: `${-size / 2}px`,
+      top: `${-size / 2}px`,
+      width: `${size}px`,
+      height: `${size}px`,
+      borderRadius: "50%",
+      background:
+        "radial-gradient(circle at 35% 35%, var(--color-glow), var(--color-accent) 65%)",
+      boxShadow:
+        "0 0 14px 2px color-mix(in srgb, var(--color-accent) 55%, transparent)",
+      pointerEvents: "none",
+      zIndex: "60",
+      opacity: "0",
+      willChange: "transform, opacity",
+    });
+    document.body.appendChild(orb);
+    gsap.set(orb, { x: start.x, y: start.y });
+    return orb;
   });
-  const img = document.createElement("img");
-  img.src = src;
-  img.alt = "";
-  Object.assign(img.style, {
-    display: "block",
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  });
-  ghost.appendChild(img);
-  document.body.appendChild(ghost);
 
   let arrived = false;
+  const cleanup = () => orbs.forEach((orb) => orb.remove());
+
   const arrive = () => {
     if (arrived) return;
     arrived = true;
-    ghost.remove();
     onArrive();
+
+    const ring = document.createElement("div");
+    Object.assign(ring.style, {
+      position: "fixed",
+      left: `${end.x - 22}px`,
+      top: `${end.y - 22}px`,
+      width: "44px",
+      height: "44px",
+      borderRadius: "50%",
+      border: "1px solid var(--color-accent)",
+      pointerEvents: "none",
+      zIndex: "60",
+    });
+    document.body.appendChild(ring);
+    gsap.fromTo(
+      ring,
+      { scale: 0.5, opacity: 0.9 },
+      {
+        scale: 1.8,
+        opacity: 0,
+        duration: 1,
+        ease: "power2.out",
+        onComplete: () => ring.remove(),
+      }
+    );
+
+    // A slow gold breath on the bag icon, not a bounce.
+    const root = getComputedStyle(document.documentElement);
+    target.style.transition = "none";
     gsap.fromTo(
       target,
-      { scale: 1 },
-      { scale: 1.2, duration: 0.14, yoyo: true, repeat: 1, ease: "power2.out", clearProps: "scale" }
+      { color: root.getPropertyValue("--color-accent").trim() },
+      {
+        color: root.getPropertyValue("--color-text").trim(),
+        duration: 1.2,
+        ease: "power1.out",
+        onComplete: () => {
+          target.style.color = "";
+          target.style.transition = "";
+        },
+      }
     );
   };
 
-  const tl = gsap.timeline({ onComplete: arrive });
-  tl.fromTo(
-    ghost,
-    { scale: 0.5, opacity: 0 },
-    { scale: 1, opacity: 1, duration: 0.2, ease: "back.out(1.6)" }
-  )
-    // x and y use different eases so the thumbnail arcs up, then sweeps in.
-    .to(ghost, { x: dx, duration: 0.75, ease: "power2.in" }, ">0.05")
-    .to(ghost, { y: dy, duration: 0.75, ease: "power3.out" }, "<")
-    .to(ghost, { scale: 0.2, opacity: 0.5, duration: 0.75, ease: "power2.in" }, "<");
+  orbs.forEach((orb, i) => {
+    const lead = i === 0;
+    const progress = { t: 0 };
 
-  // Never leave the item un-added if the animation is interrupted.
-  window.setTimeout(arrive, 2500);
+    gsap.to(progress, {
+      t: 1,
+      duration: TRAVEL,
+      delay: i * STAGGER,
+      ease: "power2.inOut",
+      onStart: () => {
+        gsap.set(orb, { opacity: 1 - i * 0.11 });
+      },
+      onUpdate: () => {
+        const p = curve(start, bend, end, progress.t);
+        const fade = lead || progress.t < 0.85 ? 1 : (1 - progress.t) / 0.15;
+        gsap.set(orb, {
+          x: p.x,
+          y: p.y,
+          scale: 1 - progress.t * 0.35,
+          opacity: (1 - i * 0.11) * fade,
+        });
+      },
+      onComplete: () => {
+        if (lead) {
+          orb.remove();
+          arrive();
+        }
+        if (i === ORB_COUNT - 1) cleanup();
+      },
+    });
+  });
+
+  // Never leave the item un-added, or particles behind, if interrupted.
+  window.setTimeout(() => {
+    arrive();
+    cleanup();
+  }, 3000);
 }
