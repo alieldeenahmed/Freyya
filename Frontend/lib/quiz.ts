@@ -1,5 +1,5 @@
-import type { Intensity, Undertone } from "./types";
-import { getProductById } from "./products";
+import type { Intensity, Product, Undertone } from "./types";
+import { findProduct } from "./products";
 
 export interface QuizOption {
   id: string;
@@ -82,7 +82,7 @@ export interface QuizResult {
   variantId: string;
 }
 
-export function scoreQuiz(answers: Answers): QuizResult {
+export function scoreQuiz(answers: Answers, products: Product[]): QuizResult {
   const productOption = findOption("product", answers.product);
   const productId = productOption?.productId ?? "freyya-balm";
 
@@ -99,7 +99,7 @@ export function scoreQuiz(answers: Answers): QuizResult {
   const intensityOption = findOption("intensity", answers.intensity);
   const intensity = intensityOption?.intensity ?? "subtle";
 
-  const product = getProductById(productId);
+  const product = findProduct(products, productId);
   const matches = product?.variants?.filter((v) => v.undertone === undertone) ?? [];
   const variant =
     matches.find((v) => v.intensity === intensity) ??

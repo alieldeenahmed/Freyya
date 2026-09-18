@@ -7,9 +7,11 @@ import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useMagnetic } from "@/lib/useMagnetic";
 import { QUESTIONS, scoreQuiz, type Answers } from "@/lib/quiz";
-import { getProductById } from "@/lib/products";
+import { useCatalog } from "@/lib/catalog-context";
+import { findProduct } from "@/lib/products";
 
 export default function Quiz() {
+  const catalog = useCatalog();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const stepRef = useRef<HTMLDivElement>(null);
@@ -56,8 +58,8 @@ export default function Quiz() {
     goToStep(0);
   };
 
-  const result = isResult ? scoreQuiz(answers) : null;
-  const resultProduct = result ? getProductById(result.productId) : null;
+  const result = isResult ? scoreQuiz(answers, catalog) : null;
+  const resultProduct = result ? findProduct(catalog, result.productId) : null;
   const resultVariant = resultProduct?.variants?.find(
     (v) => v.id === result?.variantId
   );

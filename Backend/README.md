@@ -1,6 +1,8 @@
 # Freyya API
 
-The backend for the Freyya storefront. It owns the catalog, orders and stock, and it serves the admin dashboard.
+The backend for the Freyya storefront. It owns the catalog, orders and stock, and provides the data and actions behind the admin dashboard, whose pages live in [`../Frontend`](../Frontend/README.md) under `/admin`.
+
+The storefront doesn't call it directly from the browser. It forwards `/api/*` to this server, so set `CORS_ORIGINS` to the storefront's address.
 
 Node, TypeScript, Fastify, Drizzle and Postgres.
 

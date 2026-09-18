@@ -1,6 +1,6 @@
 import Link from "next/link";
 import NewsletterForm from "@/components/NewsletterForm";
-import { getAllProducts } from "@/lib/products";
+import { getCatalog } from "@/lib/catalog";
 
 const EXPLORE = [
   { href: "/shop", label: "Shop all" },
@@ -17,8 +17,8 @@ const HELP = [
 
 const linkClass = "text-sm text-text/70 transition-colors hover:text-accent-deep";
 
-export default function Footer() {
-  const products = getAllProducts();
+export default async function Footer() {
+  const products = await getCatalog();
 
   return (
     <footer className="border-t border-secondary/40 px-6 py-16 sm:px-10">

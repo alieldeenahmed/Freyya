@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAllProducts } from "@/lib/products";
+import { products } from "@/data/products";
 import {
   DEFAULT_VIEW,
   applyView,
@@ -9,7 +9,6 @@ import {
   type ShopView,
 } from "@/lib/shop";
 
-const products = getAllProducts();
 const names = (view: ShopView) => applyView(products, view).map((p) => p.name);
 const params = (query: string) => new URLSearchParams(query);
 

@@ -1,13 +1,22 @@
 import FadeImage from "@/components/FadeImage";
-import type { CartItem } from "@/lib/cart-store";
 import { FREE_SHIPPING_THRESHOLD, type Totals } from "@/lib/orders";
+
+// What a summary needs of a line, so it works for both a bag and a placed order.
+interface SummaryLine {
+  id: string;
+  name: string;
+  variantName?: string | undefined;
+  price: number;
+  quantity: number;
+  image: string;
+}
 
 export default function OrderSummary({
   items,
   totals,
   showFreeShippingHint = false,
 }: {
-  items: CartItem[];
+  items: SummaryLine[];
   totals: Totals;
   showFreeShippingHint?: boolean;
 }) {

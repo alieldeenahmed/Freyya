@@ -4,18 +4,22 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { useCatalog } from "@/lib/catalog-context";
 import {
   EMPTY_CART,
-  addToCart,
   clearCart,
-  getCartItems,
-  removeFromCart,
-  setCartQuantity,
+  readStoredCart,
+  reconcileCart,
   subscribeCart,
+  withAdded,
+  withQuantity,
+  withoutItem,
+  writeCart,
   type CartItem,
 } from "@/lib/cart-store";
 
@@ -39,8 +43,13 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const catalog = useCatalog();
+
   // The cart lives in localStorage, so it survives reloads and syncs across tabs.
-  const items = useSyncExternalStore(subscribeCart, getCartItems, () => EMPTY_CART);
+  // What is saved is checked against the current catalog every time it is read.
+  const stored = useSyncExternalStore(subscribeCart, readStoredCart, () => EMPTY_CART);
+  const items = useMemo(() => reconcileCart(stored, catalog), [stored, catalog]);
+
   const [isOpen, setIsOpen] = useState(false);
   const [lastAdded, setLastAdded] = useState<AddedNotice | null>(null);
 
@@ -48,10 +57,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 
-  const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
-    setLastAdded({ ...item, stamp: Date.now() });
-    addToCart(item);
-  }, []);
+  const current = useCallback(() => reconcileCart(readStoredCart(), catalog), [catalog]);
+
+  const addItem = useCallback(
+    (item: Omit<CartItem, "quantity">) => {
+      setLastAdded({ ...item, stamp: Date.now() });
+      writeCart(withAdded(current(), item));
+    },
+    [current]
+  );
+  const removeItem = useCallback((id: string) => writeCart(withoutItem(current(), id)), [current]);
+  const updateQuantity = useCallback(
+    (id: string, quantity: number) => writeCart(withQuantity(current(), id, quantity)),
+    [current]
+  );
 
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -64,8 +83,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         lastAdded,
         clearLastAdded,
         addItem,
-        removeItem: removeFromCart,
-        updateQuantity: setCartQuantity,
+        removeItem,
+        updateQuantity,
         clear: clearCart,
         open,
         close,

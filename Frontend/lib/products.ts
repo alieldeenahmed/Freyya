@@ -1,34 +1,18 @@
-import { products } from "@/data/products";
-import type { Product, ProductCategory } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
-export function getAllProducts(): Product[] {
-  return products;
-}
+// Helpers over a list of products. The list itself comes from the API (lib/catalog.ts
+// on the server, useCatalog() in the browser).
 
-export function getProductById(id: string): Product | undefined {
+export function findProduct(products: Product[], id: string): Product | undefined {
   return products.find((product) => product.id === id);
 }
 
-export function getHeroProduct(): Product | undefined {
-  return products.find((product) => product.isHero);
-}
-
-export function getProductsByCategory(category: ProductCategory): Product[] {
-  return products.filter((product) => product.category === category);
-}
-
-export function getVariant(productId: string, variantId: string) {
-  return getProductById(productId)?.variants?.find(
-    (variant) => variant.id === variantId
-  );
-}
-
-export function getRelatedProducts(productId: string): Product[] {
-  const product = getProductById(productId);
+export function getRelatedProducts(products: Product[], productId: string): Product[] {
+  const product = findProduct(products, productId);
   if (!product) return [];
 
   return product.related
-    .map((id) => getProductById(id))
+    .map((id) => findProduct(products, id))
     .filter((related): related is Product => Boolean(related));
 }
 
@@ -37,4 +21,9 @@ export function getStock(product: Product, variantId?: string): number {
     return product.variants.find((v) => v.id === variantId)?.stock ?? 0;
   }
   return product.stock ?? 0;
+}
+
+export function isInStock(product: Product): boolean {
+  if (product.variants) return product.variants.some((v) => v.stock > 0);
+  return (product.stock ?? 0) > 0;
 }

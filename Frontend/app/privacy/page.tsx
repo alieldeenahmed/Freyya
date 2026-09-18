@@ -17,9 +17,9 @@ export default function PrivacyPage() {
     >
       <PolicySection title="What stays on your device">
         <p>
-          Three things are saved in your browser, and nowhere else: your bag, the reviews you
-          write, and your most recent order. They never leave your device, and we cannot see
-          them.
+          Your bag and the reviews you write are saved in your browser, and nowhere else. They
+          never leave your device, and we cannot see them. A copy of your most recent order is
+          kept there too, so the confirmation page still works after a refresh.
         </p>
         <p>
           Clearing your browser&apos;s site data removes them. So does using a private window
@@ -27,11 +27,15 @@ export default function PrivacyPage() {
         </p>
       </PolicySection>
 
-      <PolicySection title="Checkout">
+      <PolicySection title="Orders">
         <p>
-          Checkout asks for your name, email and delivery address so it can show an order
-          confirmation. In this demonstration the details are kept in your browser only. They are
-          not sent to a server, and no payment details are requested.
+          When you place an order, your name, email, delivery address and the items you chose are
+          saved on our server. That is how the order is processed and how you can look it up with
+          its number and your email.
+        </p>
+        <p>
+          No payment details are asked for or stored: payment is simulated. And because this is a
+          demonstration, nobody packs or ships these orders.
         </p>
       </PolicySection>
 
@@ -44,8 +48,9 @@ export default function PrivacyPage() {
 
       <PolicySection title="Cookies and tracking">
         <p>
-          The site sets no cookies, runs no analytics and loads no advertising or third-party
-          scripts. Fonts are served from the site itself.
+          Shopping here sets no cookies. There is no analytics and no advertising or third-party
+          scripts, and fonts are served from the site itself. The only cookie belongs to the
+          store&apos;s private admin area and is set only when its owner signs in.
         </p>
       </PolicySection>
 
@@ -59,8 +64,8 @@ export default function PrivacyPage() {
 
       <PolicySection title="A live store">
         <p>
-          A live store would need to keep orders on a server to fulfil them. This page would then
-          say what is kept, why, for how long, who it is shared with, and how to ask for it to be
+          A live store would take real payments and send order emails. This page would then say
+          how long orders are kept, who they are shared with, and how to ask for them to be
           corrected or deleted.
         </p>
       </PolicySection>

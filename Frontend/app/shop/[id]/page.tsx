@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import {
-  getAllProducts,
-  getProductById,
-  getRelatedProducts,
-  getStock,
-} from "@/lib/products";
+import { getCatalog } from "@/lib/catalog";
+import { findProduct, getRelatedProducts, isInStock } from "@/lib/products";
 import { getReviews, summarize } from "@/lib/reviews";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Product } from "@/lib/types";
@@ -13,10 +9,8 @@ import ProductDetail from "@/components/ProductDetail";
 import ProductReviews from "@/components/ProductReviews";
 import RelatedProducts from "@/components/RelatedProducts";
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return getAllProducts().map((product) => ({ id: product.id }));
+export async function generateStaticParams() {
+  return (await getCatalog()).map((product) => ({ id: product.id }));
 }
 
 export async function generateMetadata({
@@ -25,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = findProduct(await getCatalog(), id);
   if (!product) return {};
 
   const description = `${product.tagline} ${product.description}`;
@@ -51,11 +45,6 @@ export async function generateMetadata({
   };
 }
 
-function inStock(product: Product): boolean {
-  if (product.variants) return product.variants.some((v) => getStock(product, v.id) > 0);
-  return getStock(product) > 0;
-}
-
 function productJsonLd(product: Product, ratingSummary: ReturnType<typeof summarize>) {
   return {
     "@context": "https://schema.org",
@@ -72,7 +61,7 @@ function productJsonLd(product: Product, ratingSummary: ReturnType<typeof summar
       url: `${SITE_URL}/shop/${product.id}`,
       priceCurrency: "USD",
       price: product.price,
-      availability: inStock(product)
+      availability: isInStock(product)
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
     },
@@ -92,7 +81,8 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = getProductById(id);
+  const catalog = await getCatalog();
+  const product = findProduct(catalog, id);
 
   if (!product) notFound();
 
@@ -113,7 +103,7 @@ export default async function ProductPage({
         seeded={reviews}
         shades={product.variants?.map((variant) => variant.name)}
       />
-      <RelatedProducts products={getRelatedProducts(product.id)} />
+      <RelatedProducts products={getRelatedProducts(catalog, product.id)} />
     </div>
   );
 }

@@ -2,15 +2,16 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { ImageResponse } from "next/og";
 import { loadOgFonts } from "@/lib/og-fonts";
-import { getAllProducts, getProductById } from "@/lib/products";
+import { getCatalog } from "@/lib/catalog";
+import { findProduct } from "@/lib/products";
 
 // The page's metadata supplies the per-product alt text.
 export const alt = "Freyya";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export function generateStaticParams() {
-  return getAllProducts().map((product) => ({ id: product.id }));
+export async function generateStaticParams() {
+  return (await getCatalog()).map((product) => ({ id: product.id }));
 }
 
 export default async function ProductOpengraphImage({
@@ -19,7 +20,7 @@ export default async function ProductOpengraphImage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = findProduct(await getCatalog(), id);
   const name = product?.name ?? "Freyya";
 
   let photo: string | undefined;

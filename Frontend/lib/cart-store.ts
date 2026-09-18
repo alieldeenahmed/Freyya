@@ -1,4 +1,5 @@
-import { getProductById } from "@/lib/products";
+import { findProduct } from "@/lib/products";
+import type { Product } from "@/lib/types";
 
 export interface CartItem {
   id: string;
@@ -33,9 +34,9 @@ function looksLikeItem(value: unknown): value is CartItem {
 
 // Re-derive everything except identity and quantity from the live catalog, so a
 // saved cart can never carry an outdated price, image or stock level.
-function reconcile(items: CartItem[]): CartItem[] {
+export function reconcileCart(items: CartItem[], catalog: Product[]): CartItem[] {
   return items.flatMap((item) => {
-    const product = getProductById(item.productId);
+    const product = findProduct(catalog, item.productId);
     if (!product) return [];
 
     const variant = item.variantId
@@ -62,7 +63,8 @@ function reconcile(items: CartItem[]): CartItem[] {
   });
 }
 
-export function getCartItems(): CartItem[] {
+// What is saved, unchecked. Run it through reconcileCart before showing or trusting it.
+export function readStoredCart(): CartItem[] {
   if (typeof window === "undefined") return EMPTY_CART;
   if (memoryOnly) return cache.parsed;
 
@@ -80,7 +82,7 @@ export function getCartItems(): CartItem[] {
   let parsed = EMPTY_CART;
   try {
     const data = raw ? JSON.parse(raw) : [];
-    if (Array.isArray(data)) parsed = reconcile(data.filter(looksLikeItem));
+    if (Array.isArray(data)) parsed = data.filter(looksLikeItem);
   } catch {
     parsed = EMPTY_CART;
   }
@@ -89,7 +91,7 @@ export function getCartItems(): CartItem[] {
   return parsed;
 }
 
-function write(items: CartItem[]) {
+export function writeCart(items: CartItem[]) {
   const raw = JSON.stringify(items);
   try {
     window.localStorage.setItem(KEY, raw);
@@ -109,35 +111,29 @@ export function subscribeCart(listener: () => void) {
   };
 }
 
-export function addToCart(item: Omit<CartItem, "quantity">) {
-  const current = getCartItems();
-  const existing = current.find((i) => i.id === item.id);
+export function clearCart() {
+  writeCart([]);
+}
+
+// The changes below take the current, reconciled lines and return the new ones.
+
+export function withAdded(items: CartItem[], item: Omit<CartItem, "quantity">): CartItem[] {
+  const existing = items.find((i) => i.id === item.id);
 
   if (existing) {
-    write(
-      current.map((i) =>
-        i.id === item.id ? { ...i, quantity: Math.min(i.quantity + 1, i.stock) } : i
-      )
+    return items.map((i) =>
+      i.id === item.id ? { ...i, quantity: Math.min(i.quantity + 1, i.stock) } : i
     );
-    return;
   }
 
-  if (item.stock > 0) write([...current, { ...item, quantity: 1 }]);
+  return item.stock > 0 ? [...items, { ...item, quantity: 1 }] : items;
 }
 
-export function removeFromCart(id: string) {
-  write(getCartItems().filter((i) => i.id !== id));
+export function withoutItem(items: CartItem[], id: string): CartItem[] {
+  return items.filter((i) => i.id !== id);
 }
 
-export function setCartQuantity(id: string, quantity: number) {
-  const current = getCartItems();
-  write(
-    quantity <= 0
-      ? current.filter((i) => i.id !== id)
-      : current.map((i) => (i.id === id ? { ...i, quantity: Math.min(quantity, i.stock) } : i))
-  );
-}
-
-export function clearCart() {
-  write([]);
+export function withQuantity(items: CartItem[], id: string, quantity: number): CartItem[] {
+  if (quantity <= 0) return withoutItem(items, id);
+  return items.map((i) => (i.id === id ? { ...i, quantity: Math.min(quantity, i.stock) } : i));
 }

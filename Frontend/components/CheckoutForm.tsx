@@ -7,24 +7,21 @@ import { Field, fieldClass } from "@/components/Field";
 import OrderSummary from "@/components/OrderSummary";
 import { useCart } from "@/lib/cart-context";
 import {
+  describeCheckoutError,
+  payForOrder,
+  placeOrder,
+  toOrderRequest,
+  type CheckoutFields as Fields,
+} from "@/lib/checkout";
+import {
   COUNTRIES,
   SHIPPING_METHODS,
   computeTotals,
-  generateOrderId,
   saveOrder,
   type ShippingId,
 } from "@/lib/orders";
 import { useHydrated } from "@/lib/useHydrated";
 
-type Fields = {
-  email: string;
-  name: string;
-  line1: string;
-  line2: string;
-  city: string;
-  postalCode: string;
-  country: string;
-};
 type Errors = Partial<Record<keyof Fields, string>>;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -41,7 +38,7 @@ function SectionHeading({ number, title }: { number: string; title: string }) {
 export default function CheckoutForm() {
   const router = useRouter();
   const hydrated = useHydrated();
-  const { items, clear } = useCart();
+  const { items, clear, removeItem, updateQuantity } = useCart();
 
   const [fields, setFields] = useState<Fields>({
     email: "",
@@ -54,13 +51,20 @@ export default function CheckoutForm() {
   });
   const [shippingId, setShippingId] = useState<ShippingId>("standard");
   const [errors, setErrors] = useState<Errors>({});
+  const [submitError, setSubmitError] = useState("");
   const [placing, setPlacing] = useState(false);
+
+  // One key per attempt. Resending the same request (say after a dropped connection)
+  // returns the same order instead of making a second one; changing anything starts fresh.
+  const [attemptKey, setAttemptKey] = useState(() => crypto.randomUUID());
+  const resetKey = () => setAttemptKey(crypto.randomUUID());
 
   const totals = computeTotals(items, shippingId);
 
   const set = (key: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFields((prev) => ({ ...prev, [key]: e.target.value }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+    resetKey();
   };
 
   const validate = (): Errors => {
@@ -73,12 +77,13 @@ export default function CheckoutForm() {
     return next;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (placing || items.length === 0) return;
 
     const found = validate();
     setErrors(found);
+    setSubmitError("");
     if (Object.keys(found).length) {
       const first = Object.keys(found)[0];
       document.getElementById(`checkout-${first}`)?.focus();
@@ -86,24 +91,32 @@ export default function CheckoutForm() {
     }
 
     setPlacing(true);
-    saveOrder({
-      id: generateOrderId(),
-      placedAt: new Date().toISOString(),
-      email: fields.email.trim(),
-      name: fields.name.trim(),
-      address: {
-        line1: fields.line1.trim(),
-        line2: fields.line2.trim() || undefined,
-        city: fields.city.trim(),
-        postalCode: fields.postalCode.trim(),
-        country: fields.country,
-      },
-      shippingId,
-      items,
-      totals,
-    });
-    clear();
-    router.push("/checkout/confirmation");
+    try {
+      const order = await placeOrder(toOrderRequest(fields, shippingId, items), attemptKey);
+      // Payment is simulated on the server, but it is a separate step, as a real one would be.
+      const paid = await payForOrder(order.id, order.email);
+
+      saveOrder(paid);
+      clear();
+      router.push("/checkout/confirmation");
+    } catch (error) {
+      const lineNames = Object.fromEntries(items.map((item) => [item.id, item.name]));
+      const problem = describeCheckoutError(error, lineNames);
+
+      setSubmitError(problem.message);
+      setErrors((prev) => ({ ...prev, ...problem.fieldErrors }));
+      // The store said what is really available, so make the bag match it.
+      for (const [id, available] of Object.entries(problem.stockLimits)) {
+        if (available > 0) updateQuantity(id, available);
+        else removeItem(id);
+      }
+      if (Object.keys(problem.stockLimits).length > 0) router.refresh();
+      if (!problem.retryable) resetKey();
+
+      const firstField = Object.keys(problem.fieldErrors)[0];
+      if (firstField) document.getElementById(`checkout-${firstField}`)?.focus();
+      setPlacing(false);
+    }
   };
 
   const input = (key: keyof Fields, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => ({
@@ -213,7 +226,10 @@ export default function CheckoutForm() {
                         name="shipping"
                         value={method.id}
                         checked={shippingId === method.id}
-                        onChange={() => setShippingId(method.id)}
+                        onChange={() => {
+                          setShippingId(method.id);
+                          resetKey();
+                        }}
                         className="peer sr-only"
                       />
                       <span
@@ -252,13 +268,19 @@ export default function CheckoutForm() {
             <SectionHeading number="04" title="Payment" />
             <div className="mt-6 border-l border-accent pl-5">
               <p className="text-sm leading-relaxed text-text/70">
-                Payments aren&apos;t connected yet. This is a demonstration checkout, so
-                nothing is charged and no card details are collected.
+                Payment is simulated. This is a demonstration store, so nothing is charged and
+                no card details are collected. Your order is still recorded, and its stock is
+                taken from the shelf.
               </p>
             </div>
           </section>
 
           <div>
+            {submitError && (
+              <p role="alert" className="mb-5 border-l border-accent pl-5 text-sm text-accent-deep">
+                {submitError}
+              </p>
+            )}
             <button
               type="submit"
               disabled={placing}

@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
-import { getAllProducts } from "@/lib/products";
+import { getCatalog } from "@/lib/catalog";
 import { SITE_URL } from "@/lib/site";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pages = [
     { path: "", priority: 1 },
     { path: "/shop", priority: 0.9 },
@@ -14,7 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/terms", priority: 0.2 },
   ];
 
-  const products = getAllProducts().map((product) => ({
+  const products = (await getCatalog()).map((product) => ({
     path: `/shop/${product.id}`,
     priority: 0.8,
   }));

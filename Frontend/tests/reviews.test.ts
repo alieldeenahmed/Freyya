@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { reviews } from "@/data/reviews";
 import { getReviews, sortReviews, summarize } from "@/lib/reviews";
-import { getProductById } from "@/lib/products";
+import { products } from "@/data/products";
+import { findProduct } from "@/lib/products";
 import type { Review } from "@/lib/types";
 
 const review = (overrides: Partial<Review>): Review => ({
@@ -66,7 +67,7 @@ describe("sortReviews", () => {
 describe("seeded reviews", () => {
   it("all belong to a real product and use a 1 to 5 rating", () => {
     for (const r of reviews) {
-      expect(getProductById(r.productId), r.id).toBeDefined();
+      expect(findProduct(products, r.productId), r.id).toBeDefined();
       expect(r.rating).toBeGreaterThanOrEqual(1);
       expect(r.rating).toBeLessThanOrEqual(5);
     }

@@ -1,8 +1,28 @@
 import { useSyncExternalStore } from "react";
-import type { CartItem } from "@/lib/cart-store";
 import type { ShippingId, Totals } from "@/lib/shipping";
 
 export * from "@/lib/shipping";
+
+// One line of a placed order, as the API returns it.
+export interface OrderLine {
+  id: string;
+  productId: string;
+  variantId?: string;
+  name: string;
+  variantName?: string;
+  price: number;
+  color: string;
+  image: string;
+  quantity: number;
+}
+
+export type OrderStatus =
+  | "pending_payment"
+  | "paid"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "refunded";
 
 export interface Order {
   id: string;
@@ -17,18 +37,14 @@ export interface Order {
     country: string;
   };
   shippingId: ShippingId;
-  items: CartItem[];
+  items: OrderLine[];
   totals: Totals;
+  currency: string;
+  status: OrderStatus;
 }
 
-export function generateOrderId(): string {
-  const time = Date.now().toString(36).toUpperCase().slice(-5);
-  const rand = Math.random().toString(36).toUpperCase().slice(2, 4);
-  return `FRY-${time}${rand}`;
-}
-
-// With no backend yet the last order is kept in this browser so the
-// confirmation page can show it. Swap for an API call when there is one.
+// The order the API just confirmed is kept in this browser so the confirmation
+// page can show it, including after a refresh.
 const KEY = "freyya:last-order";
 const listeners = new Set<() => void>();
 let cache: { raw: string | null; parsed: Order | null } = { raw: null, parsed: null };

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import ShopBrowser, { ShopBrowserFallback } from "@/components/ShopBrowser";
-import { getAllProducts } from "@/lib/products";
+import { getCatalog } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Shop",
@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/shop" },
 };
 
-export default function ShopPage() {
-  const products = getAllProducts();
+export default async function ShopPage() {
+  const products = await getCatalog();
 
   return (
     <div className="px-6 py-16 sm:px-10 sm:py-24">
