@@ -1,0 +1,19 @@
+{
+  "name": "freyya",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Freyya: a luxury skincare storefront, its API and an admin dashboard.",
+  "license": "MIT",
+  "scripts": {
+    "install:all": "npm --prefix Backend install && npm --prefix Frontend install",
+    "dev:api": "npm --prefix Backend run dev",
+    "dev:web": "npm --prefix Frontend run dev",
+    "db:migrate": "npm --prefix Backend run db:migrate",
+    "db:seed": "npm --prefix Backend run db:seed",
+    "admin:hash": "npm --prefix Backend run admin:hash --",
+    "typecheck": "npm --prefix Backend run typecheck && npm --prefix Frontend run typecheck",
+    "lint": "npm --prefix Frontend run lint",
+    "test": "npm --prefix Backend test && npm --prefix Frontend test",
+    "build": "npm --prefix Backend run build && npm --prefix Frontend run build"
+  }
+}

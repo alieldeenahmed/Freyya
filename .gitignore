@@ -1,0 +1,10 @@
+# Each package keeps its own ignore rules. This is the safety net for the repo root.
+
+node_modules
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
+Thumbs.db
