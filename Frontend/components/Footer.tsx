@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NewsletterForm from "@/components/NewsletterForm";
 import { getAllProducts } from "@/lib/products";
 
 const EXPLORE = [
@@ -28,6 +29,9 @@ export default function Footer() {
             <p className="mt-4 max-w-xs text-sm text-text/70">
               Formulated with intention. Nothing else.
             </p>
+            <div className="mt-10">
+              <NewsletterForm />
+            </div>
           </div>
 
           <nav aria-label="Explore">

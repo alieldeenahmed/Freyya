@@ -9,11 +9,13 @@ Freyya is a storefront for a six-product skincare line. It is built with Next.js
 ## What's in it
 
 - **A shade quiz.** Five questions match a visitor to one shade of the lip balm or the glow drops.
-- **A shop and product pages.** Each product has ingredients, skin types, size and usage, live stock, ratings and reviews, and related products.
+- **A shop with filter and sort.** Filter by skincare or color and sort by price or name. The choice is kept in the URL, so it survives a reload and can be shared.
+- **Product pages.** Each product has ingredients, skin types, size and usage, live stock, ratings and reviews, and related products.
 - **Reviews.** Seeded reviews plus a form for writing your own, saved on the device.
 - **A persistent bag.** The cart survives reloads and stays in sync across tabs. Quantities are capped at stock.
 - **A demo checkout.** Contact, delivery, shipping method and an order confirmation page. No payment is taken and no card data is collected.
 - **An accessible cart drawer.** It behaves like a real modal dialog: focus moves in, stays in, and returns when it closes.
+- **A newsletter field.** In the footer, demo-only: it checks the address and saves nothing.
 - **Help pages.** Contact, shipping and returns, privacy and terms. The shipping page reads its prices and countries from the same data as checkout, so the two can't disagree.
 - **Search-ready pages.** Per-page metadata, share images, product structured data, a sitemap and `robots.txt`.
 
@@ -106,9 +108,10 @@ Home scores 98 on desktop. Performance moves by several points between runs, so 
 
 ### Tests
 
-`npm test` runs 52 tests covering:
+`npm test` runs 64 tests covering:
 
 - quiz scoring
+- shop filtering, sorting and how the choice is read from and written to the URL
 - cart stock limits, persistence and recovery from a tampered or corrupted saved cart
 - shipping and order totals, including the free-shipping threshold
 - review averages and ordering

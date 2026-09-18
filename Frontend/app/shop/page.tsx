@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import ProductCard from "@/components/ProductCard";
+import ShopBrowser, { ShopBrowserFallback } from "@/components/ShopBrowser";
 import { getAllProducts } from "@/lib/products";
 
 export const metadata: Metadata = {
@@ -16,16 +17,9 @@ export default function ShopPage() {
     <div className="px-6 py-16 sm:px-10 sm:py-24">
       <div className="mx-auto max-w-6xl">
         <h1 className="font-serif text-4xl text-text sm:text-5xl">Shop</h1>
-        <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product, index) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              headingLevel="h2"
-              priority={index < 3}
-            />
-          ))}
-        </div>
+        <Suspense fallback={<ShopBrowserFallback products={products} />}>
+          <ShopBrowser products={products} />
+        </Suspense>
       </div>
     </div>
   );

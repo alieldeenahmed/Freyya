@@ -35,10 +35,10 @@ export default function PrivacyPage() {
         </p>
       </PolicySection>
 
-      <PolicySection title="The contact form">
+      <PolicySection title="The contact form and the list">
         <p>
-          The <Link href="/contact">contact form</Link> checks what you type and then discards
-          it. Nothing is sent or stored.
+          The <Link href="/contact">contact form</Link> and the newsletter field in the footer
+          check what you type and then discard it. Nothing is sent or stored.
         </p>
       </PolicySection>
 
