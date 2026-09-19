@@ -308,6 +308,7 @@ export default function ProductDetail({
                         ? `${variant.name} (sold out)`
                         : variant.name
                     }
+                    aria-pressed={selectedVariant?.id === variant.id}
                     onClick={() => setSelectedVariant(variant)}
                     className={`h-11 w-11 rounded-full border-2 transition-transform hover:scale-110 ${
                       variant.stock <= 0 ? "opacity-40" : ""

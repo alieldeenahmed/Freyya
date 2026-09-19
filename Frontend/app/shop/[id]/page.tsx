@@ -9,6 +9,11 @@ import ProductDetail from "@/components/ProductDetail";
 import ProductReviews from "@/components/ProductReviews";
 import RelatedProducts from "@/components/RelatedProducts";
 
+// Only the products that existed at build time have pages. Anything else is a real
+// 404 response. Without this, an unknown id would render the not-found design but
+// answer 200, because the response has already started streaming by then.
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   return (await getCatalog()).map((product) => ({ id: product.id }));
 }

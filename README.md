@@ -1,5 +1,7 @@
 # Freyya
 
+[![CI](https://github.com/alieldeenahmed/Freyya/actions/workflows/ci.yml/badge.svg)](https://github.com/alieldeenahmed/Freyya/actions/workflows/ci.yml)
+
 **A luxury skincare storefront, built as a frontend engineering and product design project, with a real API and admin dashboard behind it.**
 
 Freyya sells six products in a calm, editorial interface: scroll-driven product stories, a shade-matching quiz, a persistent bag, and a checkout that places real orders against a backend. Payment is simulated. Everything else, including stock, orders and the admin, runs against a real database when the API is running.
@@ -140,7 +142,7 @@ sequenceDiagram
   - *Local UI state:* ordinary `useState` for forms, the quiz, drawers and menus.
 - **Data handling.** `lib/catalog.ts` fetches and validates the catalog. `lib/api.ts` is a small typed client that turns API failures into an `ApiError`. `lib/checkout.ts` builds order requests and turns each kind of failure into a message and a fix.
 - **Reusable pieces.** `Reveal` (scroll-triggered fade-in), `FadeImage`, `Field` and `fieldClass` (form inputs), `Select` (dropdown), `PolicyPage`, `ProductCard`, `ProductGrid`, `OrderSummary`, `StatusBadge`, and hooks such as `useMagnetic` and `useHydrated`.
-- **Quality tooling.** Strict TypeScript, ESLint with `eslint-config-next`, and Vitest.
+- **Quality tooling.** Strict TypeScript, ESLint with `eslint-config-next`, Vitest with Testing Library, Playwright with axe, and CI on GitHub Actions.
 
 ## UI / Design System
 
@@ -213,19 +215,19 @@ Other techniques used:
 
 ## Accessibility
 
-Implemented in code, and exercised by hand (keyboard and focus behaviour) and with a contrast calculation during development. No screen-reader testing has been done, so no compliance claim is made.
+Implemented in code, checked by hand for keyboard and focus behaviour, and scanned automatically with axe (see below). No screen-reader testing has been done yet, so no compliance claim is made.
 
 - A skip-to-content link, and `aria-current="page"` on the active nav link.
 - **The bag drawer is a `role="dialog"` with `aria-modal`.** Opening it moves focus in, traps Tab, closes on Escape, marks the rest of the page `inert`, stops smooth scrolling and locks page scroll, and returns focus to the bag button on close. Quantity changes are announced through `aria-live`.
 - **Forms.** Every field has a label. Errors use `role="alert"`, `aria-invalid` and `aria-describedby`. The checkout, contact and newsletter forms also move focus to the first invalid field on submit.
 - **The star picker** is a `role="radiogroup"` with roving `tabIndex` and arrow-key handling. Displayed ratings are `role="img"` with a text label.
 - **The custom `Select`** is a listbox: `aria-haspopup`, `aria-expanded`, `aria-activedescendant`, arrow keys, Home and End, type-to-jump, and Escape.
-- The accordion uses `aria-expanded` and `aria-controls`. Filter chips use `aria-pressed`.
+- The accordion uses `aria-expanded` and `aria-controls`. Filter chips and shade swatches use `aria-pressed`.
 - Images have descriptive `alt` text, or an empty one when purely decorative.
 - **Reduced motion** is respected across GSAP (`prefersReducedMotion()`), CSS (`prefers-reduced-motion` and `motion-reduce:`), and smooth scrolling, which is not started at all.
 - Text tones were checked against WCAG AA contrast ratios during development, which is why a separate deeper gold exists for small text. This was a calculation, not a formal audit.
 
-Known gap: shade swatches announce their name and sold-out state but not which one is selected.
+**Automated scans.** The end-to-end suite scans every page and the key interactive states with axe, against the WCAG 2.0 and 2.1 A and AA rules. The states are the open bag drawer, an open dropdown, the review form, a quiz result, checkout with errors showing, and the admin pages. All pass, and a separate test proves the scanner reports real problems. Automated scans find only a share of accessibility problems. A manual pass with a screen reader has not been done, and [`docs/accessibility-testing.md`](docs/accessibility-testing.md) is the checklist for it.
 
 ## Performance
 
@@ -240,24 +242,38 @@ Lighthouse was run locally during development and its results are recorded in [`
 
 ## Testing
 
-**Storefront: 81 tests in 7 files** (Vitest, Node environment) in `Frontend/tests`. They cover the logic that is easy to break silently:
+There are three layers, and CI runs all of them.
+
+**Storefront: 158 tests in 14 files** (Vitest, in `Frontend/tests`). Logic tests run in Node. Component tests render the real components in jsdom with Testing Library, with the network mocked.
 
 | Area | What is checked |
 | --- | --- |
-| Shade Match | All eight shade outcomes, ties, fallbacks, defaults, and every one of the 108 answer combinations. |
-| Bag | Stock limits per shade, persistence across a reload, and recovery from a tampered, outdated or corrupted saved bag. |
-| Checkout | Request building, and each kind of server error mapped to a message and a fix. |
-| Shop | Filtering, sorting, and reading and writing the URL. |
+| Shade Match | All eight shade outcomes, ties, fallbacks, defaults, and every one of the 108 answer combinations. The quiz component is tested from the first question to the result. |
+| Bag | Stock limits per shade, persistence across a reload, and recovery from a tampered, outdated or corrupted saved bag. The drawer is tested as a modal: focus trap, Escape, inert background, quantities. |
+| Checkout | Request building, and each kind of server error mapped to a message and a fix. The form is tested end to end against a mocked API: request contents, validation, stock refusals that correct the bag, field errors, and idempotency keys that are reused after a dropped connection and reset after a change. |
+| Shop, product page, reviews | Filtering, sorting and the URL. Shade swatches and stock lines, star rating and review validation, the accordion, and the custom dropdown's keyboard behaviour. |
 | Catalog, reviews, totals | Data integrity, average and distribution, and the free-shipping threshold. |
 
-**API: 84 tests in 5 files**, run against a real Postgres database, including ten buyers racing for three units (exactly three orders succeed), idempotent retries, reservation expiry, admin sign-in and sessions, order status rules, and stock adjustments. The API tests wipe their tables, so they run on a separate database, and they refuse to run if it matches `DATABASE_URL`. See [`Backend/README.md`](Backend/README.md#tests).
+**API: 88 tests in 6 files**, run against a real Postgres database, including ten buyers racing for three units (exactly three orders succeed), idempotent retries, reservation expiry, admin sign-in and sessions, order status rules, and stock adjustments. The API tests wipe their tables, so they run on a separate database, and they refuse to run if it matches `DATABASE_URL`. See [`Backend/README.md`](Backend/README.md#tests).
 
-There are no component or end-to-end tests, and there is no CI pipeline.
+Four of them are **contract tests**. The storefront and the API each keep their own copy of the shipping rules and the catalog, so that either can be deployed alone. These tests read the storefront's files and fail as soon as the two copies stop agreeing.
+
+**End to end: 58 tests in 5 files** (Playwright), against a production build of the storefront, the real API and a throwaway database, on desktop Chrome and a 375 pixel phone:
+
+- Browsing, filtering, the bag and Shade Match.
+- A real purchase, checked against the API afterwards, and a refused order.
+- The admin: signing in, shipping an order, cancelling one and seeing its stock return, restocking, and refusing negative stock.
+- Layout on a phone: no sideways scrolling on any page, the menu, the drawer and the stacked layouts.
+- The automated accessibility scans described above.
 
 ```bash
-npm test                       # both packages
-npm --prefix Frontend test     # storefront only
+npm test                # storefront and API tests
+npm run test:e2e        # end-to-end tests (needs Backend/.env.test)
 ```
+
+**Continuous integration.** `.github/workflows/ci.yml` runs on every push to `main` and every pull request. It checks the storefront (lint, type-check, tests, build) and the API (type-check, build, migrations on an empty Postgres, tests), then runs the end-to-end suite. The workflow was validated and its first two jobs were reproduced from a clean checkout, but the end-to-end job has not yet run on GitHub's own runners. There is no automatic deployment.
+
+Not covered: a manual screen-reader pass, and real-device testing beyond the emulated phone.
 
 ## Project Structure
 
@@ -270,7 +286,8 @@ Freyya/
 │   │   └── admin/           Admin UI
 │   ├── lib/                 Catalog, bag, checkout, quiz, shop view, API client
 │   ├── data/                Bundled catalog (fallback and test fixture), seeded reviews
-│   ├── tests/               Vitest tests
+│   ├── tests/               Logic and component tests (Vitest)
+│   ├── e2e/                 End-to-end and accessibility tests (Playwright)
 │   ├── public/              Product and hero photography
 │   ├── assets/fonts/        Fonts used to draw share images and icons
 │   └── docs/screenshots/    Storefront screenshots
@@ -279,7 +296,8 @@ Freyya/
 │   ├── drizzle/             Generated SQL migrations
 │   ├── tests/               Integration and unit tests
 │   └── scripts/             Admin password helper
-├── docs/screenshots/        Admin screenshots
+├── .github/workflows/       CI
+├── docs/                    Admin screenshots, accessibility checklist
 └── package.json             Root scripts that drive both packages
 ```
 
@@ -296,7 +314,9 @@ Freyya/
 | Drizzle ORM, `pg` | Database access and SQL migrations |
 | PostgreSQL | Data (developed against Neon) |
 | Zod | Request and environment validation |
-| Vitest | Tests in both packages |
+| Vitest, Testing Library, jsdom | Unit, integration and component tests |
+| Playwright, axe-core | End-to-end tests and automated accessibility scans |
+| GitHub Actions | CI |
 | ESLint (`eslint-config-next`) | Storefront linting |
 
 The storefront's only runtime dependencies are `next`, `react`, `react-dom`, `gsap` and `lenis`.
@@ -312,7 +332,7 @@ The storefront's only runtime dependencies are `next`, `react`, `react-dom`, `gs
 | Shop-to-product transition uses a "ghost" copy and `Flip.fit` | A comment says a fixed copy means the grid never reflows and the text column stays put. | It is bespoke code that has to handle slow image loads and reduced motion. |
 | Custom `Select` instead of the browser's | Branded, consistent dropdowns (commit: "replace native dropdowns with a branded select"). | Browser autofill no longer fills the country field, and keyboard and screen-reader behaviour is now code to maintain. |
 | Simulated payment behind a `PaymentProvider` interface | A comment marks it as the seam for a real provider. | The most visible part of a real checkout is faked. |
-| The API sets prices, and the browser sends only items and quantities | Tests and comments assert that client prices are ignored. | The shipping rules exist in both packages, so they can drift. |
+| The API sets prices, and the browser sends only items and quantities | Tests and comments assert that client prices are ignored. | The shipping rules and the catalog exist in both packages. A contract test fails if they differ, but they are still two copies. |
 | Showcase sections use CSS `sticky` plus a scrubbed timeline | The git history shows an earlier version used a GSAP pin, replaced during a "responsive and performance pass". The commits do not record why. | The section height is set from JavaScript. |
 
 ## Challenges & Solutions
@@ -325,6 +345,7 @@ The storefront's only runtime dependencies are `next`, `react`, `react-dom`, `gs
 - **localStorage data on a server-rendered page.** The checkout renders only its heading until the browser has hydrated (`useHydrated`), so the empty-bag message is not shown before the saved bag has been read.
 - **A modal that really is modal.** The drawer makes the rest of the page `inert`, traps focus, stops smooth scrolling, and restores all of it on close.
 - **Layout shift from a client-only filter.** The shop's Suspense fallback renders the same controls as the real component.
+- **A 404 page that answered 200.** The end-to-end tests found that an unknown product address showed the not-found design but returned HTTP 200, a "soft 404" for search engines. Once a response has started streaming its status cannot change. The fix is `dynamicParams = false` on the product route, so an unknown id is a real 404. The trade-off is that a product added after the last build has no page until the storefront is rebuilt. A test guards the 404.
 - **The add-to-bag feedback took three tries.** The history shows a fly-to-bag animation, then a gold-dust glide, then the current gold wipe with a rolling count and a note. The commits do not record the reasoning.
 
 ## Getting Started
@@ -381,7 +402,8 @@ The admin is at [http://localhost:3000/admin](http://localhost:3000/admin).
 | `npm run admin:hash` | Make a password hash for the admin login |
 | `npm run typecheck` | Type-check both packages |
 | `npm run lint` | Lint the storefront |
-| `npm test` | Run all tests (the API tests need `Backend/.env.test`) |
+| `npm test` | Run the storefront and API tests (the API tests need `Backend/.env.test`) |
+| `npm run test:e2e` | Run the end-to-end tests (needs `Backend/.env.test`) |
 | `npm run build` | Build both packages |
 
 To preview a production build of the storefront: `npm --prefix Frontend run build`, then `npm --prefix Frontend start`.
@@ -407,6 +429,7 @@ To preview a production build of the storefront: `npm --prefix Frontend run buil
 | `ADMIN_SESSION_HOURS` | Admin session length. Default 12. |
 | `RESERVATION_MINUTES` | How long unpaid stock is held. Default 15. |
 | `LOW_STOCK_THRESHOLD` | At or below this, an item is flagged as low. Default 5. |
+| `RATE_LIMIT` | On by default. The end-to-end run sets `false`, so its own sign-ins are not throttled. Leave it on elsewhere. |
 | `TRUST_PROXY` | Set to `true` behind a proxy, so rate limits see real client addresses. |
 
 `Backend/.env.test` (git-ignored) holds `TEST_DATABASE_URL` for the API tests. No secrets are committed: `.env` files are ignored, and only the `.env.example` files are tracked.
@@ -415,7 +438,7 @@ To preview a production build of the storefront: `npm --prefix Frontend run buil
 
 - **Storefront.** Deployed on Vercel at https://freyya.vercel.app/. The repository holds no platform configuration file. [`Frontend/README.md`](Frontend/README.md) documents the setup: Root Directory `Frontend`, with `API_URL` set to the API's address at build time.
 - **API.** Not deployed, which is why the live storefront has no backend. It is a plain Node service: build it with `npm run build`, run the migrations against the target database, then start it with `npm start`, with the environment variables above. Set `CORS_ORIGINS` to the storefront's address and `TRUST_PROXY=true` behind a proxy. See [`Backend/README.md`](Backend/README.md).
-- There is no CI/CD pipeline in the repository.
+- CI runs on GitHub Actions (see [Testing](#testing)). There is no automatic deployment.
 
 ## Current Status
 
@@ -429,9 +452,9 @@ A polished portfolio project with a working backend, not a hosted business.
 
 Limitations found during the audit:
 
-- The bundled catalog, the API's seed data and the shipping rules exist in more than one place, so they can drift.
+- The bundled catalog, the API's seed data and the shipping rules exist in more than one place. Contract tests catch drift, but they are still copies.
 - Only two responsive breakpoints. There is no dedicated tablet layout.
-- Tests cover logic, not rendered components or full user journeys, and there is no CI.
+- No manual screen-reader pass has been done, and real-device testing goes no further than an emulated phone.
 - The hero can play a background video, but none is supplied.
 
 ## Why This Project

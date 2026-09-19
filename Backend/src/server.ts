@@ -5,7 +5,7 @@ import { expireReservations } from "./services/orders.js";
 
 const config = loadConfig();
 const { db, pool } = createDb(config.DATABASE_URL);
-const app = await buildApp({ config, db, logger: true });
+const app = await buildApp({ config, db, logger: true, rateLimit: config.RATE_LIMIT });
 
 // Unpaid orders hold stock. Give it back once the hold runs out.
 const sweep = async () => {

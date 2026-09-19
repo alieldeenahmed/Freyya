@@ -35,7 +35,8 @@ The catalog, orders and stock come from a separate API, in [`../Backend`](../Bac
 - Tailwind CSS 4
 - GSAP with ScrollTrigger and Flip for motion
 - Lenis for smooth scrolling
-- Vitest for tests
+- Vitest and Testing Library for unit and component tests
+- Playwright and axe-core for end-to-end tests and accessibility scans
 - Cormorant Garamond and Manrope through `next/font`
 
 ## Getting started
@@ -57,7 +58,8 @@ If the API is down, the site still opens, using a bundled copy of the catalog. O
 | `npm run build` | Create a production build |
 | `npm start` | Serve the production build |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run the unit tests |
+| `npm test` | Run the unit and component tests |
+| `npm run test:e2e` | Run the end-to-end tests (needs the API's `.env.test`, see below) |
 
 ### Environment
 
@@ -130,15 +132,21 @@ Home scores 98 on desktop. Performance moves by several points between runs, so 
 
 ### Tests
 
-`npm test` runs 81 tests covering:
+`npm test` runs 158 tests in 14 files. Logic tests run in Node and component tests run in jsdom with Testing Library, with `fetch` mocked. They cover:
 
-- quiz scoring
+- quiz scoring, and the quiz component from the first question to the result
 - shop filtering, sorting and how the choice is read from and written to the URL
 - cart stock limits, persistence, and recovery from a tampered, outdated or corrupted saved cart
-- checkout requests, and how each kind of server error is turned into a message and a fix
+- the bag drawer as a modal: focus trap, Escape, inert background, quantities
+- checkout requests, how each kind of server error is turned into a message and a fix, and the form itself against a mocked API
+- the product page (shades, stock lines, accordion), the review form, and the custom dropdown's keyboard behaviour
 - shipping and order totals, including the free-shipping threshold
 - review averages and ordering
 - catalog integrity, such as unique ids and valid related products
+
+`npm run test:e2e` runs 58 Playwright tests on desktop Chrome and a 375 pixel phone. It builds the storefront, starts the API on port 4010 and the storefront on port 3010, and resets a throwaway database first. That database comes from `TEST_DATABASE_URL` in `../Backend/.env.test`, and it must not be the one in `DATABASE_URL`. The suite covers browsing, a real purchase, the admin, phone layout, and axe scans of every page and the main interactive states.
+
+The scans find only a share of accessibility problems. See [`../docs/accessibility-testing.md`](../docs/accessibility-testing.md) for the manual checklist.
 
 ## Project structure
 
@@ -150,7 +158,8 @@ components/     UI components
 components/admin/  Admin UI
 data/           Seeded reviews, and a copy of the catalog used as a fallback and in tests
 lib/            Catalog, cart, checkout, orders, quiz, reviews and shared helpers
-tests/          Unit tests
+tests/          Unit and component tests
+e2e/            End-to-end and accessibility tests
 docs/           Screenshots used in this README
 public/         Photography
 ```

@@ -14,6 +14,7 @@
     "typecheck": "npm --prefix Backend run typecheck && npm --prefix Frontend run typecheck",
     "lint": "npm --prefix Frontend run lint",
     "test": "npm --prefix Backend test && npm --prefix Frontend test",
-    "build": "npm --prefix Backend run build && npm --prefix Frontend run build"
+    "test:e2e": "npm --prefix Frontend run test:e2e",
+    "build":"npm --prefix Backend run build && npm --prefix Frontend run build"
   }
 }

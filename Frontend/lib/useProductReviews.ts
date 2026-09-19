@@ -2,8 +2,9 @@ import { useMemo, useSyncExternalStore } from "react";
 import { sortReviews, summarize } from "@/lib/reviews";
 import type { RatingSummary, Review } from "@/lib/types";
 
-// Reviews written on this device. With no backend yet they live in
-// localStorage; replace read/write below with an API call when there is one.
+// Reviews written on this device. The API stores the catalog, orders and stock but
+// not reviews, so these live in localStorage. To move them server-side, replace
+// read and write below with API calls.
 const KEY = "freyya:reviews";
 const EMPTY: Review[] = [];
 

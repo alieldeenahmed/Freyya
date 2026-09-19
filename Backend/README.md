@@ -50,6 +50,7 @@ Copy the output into `ADMIN_PASSWORD_HASH`, and set `ADMIN_EMAIL`.
 | `ADMIN_SESSION_HOURS` | How long an admin session lasts. Default `12`. |
 | `RESERVATION_MINUTES` | How long unpaid stock is held. Default `15`. |
 | `LOW_STOCK_THRESHOLD` | At or below this, an item is flagged as low. Default `5`. |
+| `RATE_LIMIT` | On by default. The end-to-end run sets `false`, so its own sign-ins are not throttled. Leave it on elsewhere. |
 | `TRUST_PROXY` | Set to `true` behind a proxy or load balancer, so rate limits see real client addresses. |
 
 ### Scripts
@@ -64,6 +65,7 @@ Copy the output into `ADMIN_PASSWORD_HASH`, and set `ADMIN_EMAIL`.
 | `npm run db:seed` | Load the launch catalog. Safe to repeat; existing stock is left alone |
 | `npm run admin:hash` | Make a password hash for the admin login |
 | `npm test` | Run the tests |
+| `npm run db:reset:test` | Clear orders and restore launch stock in the test database (used before the end-to-end run) |
 
 ## API
 
@@ -135,7 +137,9 @@ Sign in with `POST /admin/login`. The session is an http-only cookie. Every othe
 
 ## Tests
 
-`npm test` runs 84 tests: the pricing and status rules, password hashing, and the API against a real database, including concurrent orders, retries, expiry, sign-in and sessions, order transitions and stock adjustments.
+`npm test` runs 88 tests in 6 files: the pricing and status rules, password hashing, and the API against a real database, including concurrent orders, retries, expiry, sign-in and sessions, order transitions and stock adjustments.
+
+Four of them are contract tests (`tests/contract.test.ts`). The storefront keeps its own copy of the shipping rules and the catalog, so that either package can be deployed alone. These tests read the storefront's files and fail if the copies drift from `src/domain/pricing.ts` and `src/db/seed-data.ts`. They are skipped when the `Frontend` folder is not next to this one.
 
 The database tests wipe their tables, so they run against a separate database. Put its connection string in `.env.test`:
 
@@ -143,7 +147,9 @@ The database tests wipe their tables, so they run against a separate database. P
 TEST_DATABASE_URL=postgresql://...
 ```
 
-With Neon, a branch of the project is ideal. The tests refuse to run if `TEST_DATABASE_URL` matches `DATABASE_URL`.
+With Neon, a branch of the project is ideal. The tests refuse to run if `TEST_DATABASE_URL` matches `DATABASE_URL`. The database needs its tables first, so run `npm run db:migrate` against it once (with `DATABASE_URL` pointing at it for that command).
+
+The storefront's end-to-end tests also use this database. See [`../Frontend/README.md`](../Frontend/README.md#tests).
 
 ## Project structure
 

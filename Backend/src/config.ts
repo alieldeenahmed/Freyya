@@ -6,6 +6,8 @@ const schema = z.object({
   HOST: z.string().default("0.0.0.0"),
   // Turn on behind a proxy or load balancer so rate limits see the real client address.
   TRUST_PROXY: z.stringbool().default(false),
+  // Leave on outside tests. The end-to-end run turns it off so its own sign-ins are not throttled.
+  RATE_LIMIT: z.stringbool().default(true),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   // Comma-separated list of origins allowed to call the API from a browser.
   CORS_ORIGINS: z.string().default("http://localhost:3000"),
