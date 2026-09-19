@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -8,6 +8,12 @@ export default function NewsletterForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const thanksRef = useRef<HTMLDivElement>(null);
+
+  // The form is replaced by the thank-you, which would drop focus. Move it to the message.
+  useEffect(() => {
+    if (done) thanksRef.current?.focus();
+  }, [done]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +30,7 @@ export default function NewsletterForm() {
 
   if (done) {
     return (
-      <div role="status" className="max-w-sm">
+      <div ref={thanksRef} role="status" tabIndex={-1} className="max-w-sm outline-none">
         <p className="font-serif text-xl text-text">Thank you.</p>
         <p className="mt-2 text-sm text-text/70">
           This is a demonstration, so your address wasn&apos;t saved and nothing will be sent.

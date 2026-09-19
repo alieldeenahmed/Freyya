@@ -40,6 +40,19 @@ test.describe("On a phone", () => {
     await expect(page).toHaveURL(/\/quiz$/);
   });
 
+  test("Escape closes the menu and puts focus back on its button", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open menu" }).click();
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+
+    await page.keyboard.press("Escape");
+
+    const menu = page.getByRole("button", { name: "Open menu" });
+    await expect(menu).toBeFocused();
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
+  });
+
   test("the product page stacks the photograph above the details", async ({ page }) => {
     await page.goto("/shop/golden-hour-serum");
 
@@ -65,14 +78,15 @@ test.describe("On a phone", () => {
     await seedBag(page, [{ id: "dawn-cleanse", productId: "dawn-cleanse", quantity: 1 }]);
     await page.goto("/");
 
-    await page.getByRole("button", { name: "Cart", exact: true }).click();
+    await page.getByRole("button", { name: /^Cart(,|$)/ }).click();
     const drawer = page.getByRole("dialog", { name: "Your bag" });
-    // Wait for the slide-in to finish before measuring.
-    await expect(drawer).toBeInViewport({ ratio: 0.99 });
-
-    const box = await drawer.boundingBox();
-    expect(box!.x).toBeGreaterThanOrEqual(0);
-    expect(box!.x + box!.width).toBeLessThanOrEqual(376);
+    // The panel slides in, so keep measuring until it has settled.
+    const edges = async () => {
+      const box = await drawer.boundingBox();
+      return [box!.x, box!.x + box!.width];
+    };
+    await expect.poll(async () => (await edges())[0]).toBeGreaterThanOrEqual(0);
+    await expect.poll(async () => (await edges())[1]).toBeLessThanOrEqual(376);
   });
 
   test("checkout puts the form first and the summary below it", async ({ page }) => {

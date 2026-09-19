@@ -22,7 +22,8 @@ test.describe("Browsing the storefront", () => {
     await page.getByRole("button", { name: "Color", exact: true }).click();
     await expect(page).toHaveURL(/group=color/);
     await expect(products).toHaveText(["Freyya Balm", "Dew Drops"]);
-    await expect(page.getByRole("status")).toHaveText("2 products");
+    // The bag's announcers are status regions too, so pick the count by its text.
+    await expect(page.getByRole("status").filter({ hasText: "products" })).toHaveText("2 products");
 
     await page.getByRole("button", { name: /Sort by/ }).click();
     await page.getByRole("option", { name: "Price: high to low" }).click();
@@ -61,9 +62,14 @@ test.describe("The bag", () => {
     await page.getByRole("button", { name: "Petal" }).click();
     await page.getByRole("button", { name: "Add to bag" }).click();
 
-    const cart = page.getByRole("button", { name: "Cart", exact: true });
+    const cart = page.getByRole("button", { name: /^Cart(,|$)/ });
     await expect(cart).toContainText("1");
-    await expect(page.getByRole("status").filter({ hasText: "Added to your bag" })).toBeVisible();
+    await expect(cart).toHaveAccessibleName("Cart, 1 item");
+    // Seen on screen, and said aloud through a live region that was already on the page.
+    await expect(page.getByText("Added to your bag", { exact: true })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "added to your bag" })).toHaveText(
+      "Freyya Balm, Petal, added to your bag."
+    );
 
     await cart.click();
     const drawer = page.getByRole("dialog", { name: "Your bag" });
@@ -78,13 +84,13 @@ test.describe("The bag", () => {
     await expect(cart).toBeFocused();
 
     await page.reload();
-    await expect(page.getByRole("button", { name: "Cart", exact: true })).toContainText("1");
+    await expect(page.getByRole("button", { name: /^Cart(,|$)/ })).toContainText("1");
   });
 
   test("changes quantities up to the stock limit", async ({ page }) => {
     await page.goto("/shop/golden-hour-serum");
     await page.getByRole("button", { name: "Add to bag" }).click();
-    await page.getByRole("button", { name: "Cart", exact: true }).click();
+    await page.getByRole("button", { name: /^Cart(,|$)/ }).click();
 
     const drawer = page.getByRole("dialog", { name: "Your bag" });
     const more = drawer.getByRole("button", { name: "Increase quantity of Golden Hour Serum" });

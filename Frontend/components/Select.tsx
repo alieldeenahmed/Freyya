@@ -162,6 +162,7 @@ export default function Select<T extends string>({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? `${uid}-list` : undefined}
         aria-labelledby={isMenu ? `${labelId} ${buttonId}` : undefined}
         onClick={() => (open ? closeMenu() : openMenu())}
         onKeyDown={onButtonKeyDown}
@@ -184,6 +185,7 @@ export default function Select<T extends string>({
       {open && (
         <ul
           ref={listRef}
+          id={`${uid}-list`}
           role="listbox"
           tabIndex={-1}
           aria-label={isMenu ? undefined : label}

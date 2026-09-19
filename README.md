@@ -215,19 +215,31 @@ Other techniques used:
 
 ## Accessibility
 
-Implemented in code, checked by hand for keyboard and focus behaviour, and scanned automatically with axe (see below). No screen-reader testing has been done yet, so no compliance claim is made.
+Built for screen readers and keyboards, and checked with automated tests of the accessibility tree, focus and announcements (see below). Nobody has yet listened to the site with a real screen reader such as NVDA or VoiceOver, so no compliance claim is made.
 
-- A skip-to-content link, and `aria-current="page"` on the active nav link.
-- **The bag drawer is a `role="dialog"` with `aria-modal`.** Opening it moves focus in, traps Tab, closes on Escape, marks the rest of the page `inert`, stops smooth scrolling and locks page scroll, and returns focus to the bag button on close. Quantity changes are announced through `aria-live`.
-- **Forms.** Every field has a label. Errors use `role="alert"`, `aria-invalid` and `aria-describedby`. The checkout, contact and newsletter forms also move focus to the first invalid field on submit.
-- **The star picker** is a `role="radiogroup"` with roving `tabIndex` and arrow-key handling. Displayed ratings are `role="img"` with a text label.
-- **The custom `Select`** is a listbox: `aria-haspopup`, `aria-expanded`, `aria-activedescendant`, arrow keys, Home and End, type-to-jump, and Escape.
-- The accordion uses `aria-expanded` and `aria-controls`. Filter chips and shade swatches use `aria-pressed`.
-- Images have descriptive `alt` text, or an empty one when purely decorative.
+- A skip-to-content link, `aria-current="page"` on the active nav link, one `main` landmark, and named navigations.
+- **The bag button says how many items it holds** ("Cart, 2 items"). Adding an item is announced ("Freyya Balm, Petal, added to your bag") through a live region that is always on the page, because a region that starts out hidden is unreliable.
+- **The bag drawer is a `role="dialog"` with `aria-modal`.** Opening it moves focus in, traps Tab, closes on Escape, marks the rest of the page `inert`, stops smooth scrolling and locks page scroll, and returns focus to the bag button on close. Items are a list. A quantity change or removal is announced with the product's name, and removing an item keeps focus inside the drawer instead of dropping it.
+- **Forms.** Every field has a label. Errors use `role="alert"`, `aria-invalid` and `aria-describedby`. The checkout, contact, newsletter and review forms move focus to the first invalid field on submit. When the contact or newsletter form is sent, focus moves to the thank-you, since the form it was in is gone.
+- **The star picker** is a `role="radiogroup"` where the arrow keys move focus and choose together, as a native radio group does. Displayed ratings are `role="img"` with a text label. The rating breakdown reads as sentences ("3 reviews with 5 stars"), not bare numbers.
+- **Shade Match** moves focus to each new question and to the result, because the button just pressed disappears. Its answers are a group named by the question.
+- **Shade swatches** are a group named by the shade label, and say which is pressed and which are sold out. Photographs of shades that are not showing are hidden from readers, and the stock line is announced when the shade changes.
+- **The custom `Select`** is a listbox: `aria-haspopup`, `aria-expanded`, `aria-controls`, `aria-activedescendant`, arrow keys, Home and End, type-to-jump, and Escape.
+- **The accordion** names each panel by its button, and closed panels are `inert`, so their text is not read and their contents cannot be tabbed to. Filter chips use `aria-pressed`.
+- **The mobile menu** closes on Escape and hands focus back to its button.
+- **The admin** gives each row's buttons the item's name ("Adjust stock, Second Skin Cream"), moves focus into and out of the stock form, asks before cancelling with the safe answer focused, and announces the result of an order change.
+- Product cards are named once, by their heading. Their photographs are decorative.
+- Images otherwise have descriptive `alt` text, or an empty one when purely decorative.
 - **Reduced motion** is respected across GSAP (`prefersReducedMotion()`), CSS (`prefers-reduced-motion` and `motion-reduce:`), and smooth scrolling, which is not started at all.
 - Text tones were checked against WCAG AA contrast ratios during development, which is why a separate deeper gold exists for small text. This was a calculation, not a formal audit.
 
-**Automated scans.** The end-to-end suite scans every page and the key interactive states with axe, against the WCAG 2.0 and 2.1 A and AA rules. The states are the open bag drawer, an open dropdown, the review form, a quiz result, checkout with errors showing, and the admin pages. All pass, and a separate test proves the scanner reports real problems. Automated scans find only a share of accessibility problems. A manual pass with a screen reader has not been done, and [`docs/accessibility-testing.md`](docs/accessibility-testing.md) is the checklist for it.
+**Automated checks.** Three kinds, all run in CI:
+
+- **axe scans** of every page and the key interactive states, against the WCAG 2.0, 2.1 and 2.2 A and AA rules plus axe's best-practice rules. The states are the open bag drawer, an open dropdown, the review form, a quiz result, checkout with errors showing, and the admin pages. All pass, and a separate test proves the scanner reports real problems.
+- **Accessibility-tree and focus tests** in a real browser, which check names, states, landmarks and where focus lands after each action.
+- **Component tests** for the same behaviour, so a regression fails in seconds.
+
+These read the information a screen reader is built from. They cannot tell whether an announcement is helpful or the reading order is pleasant. That takes a person with a screen reader, which has not been done, and [`docs/accessibility-testing.md`](docs/accessibility-testing.md) is the checklist for it.
 
 ## Performance
 
@@ -244,7 +256,7 @@ Lighthouse was run locally during development and its results are recorded in [`
 
 There are three layers, and CI runs all of them.
 
-**Storefront: 158 tests in 14 files** (Vitest, in `Frontend/tests`). Logic tests run in Node. Component tests render the real components in jsdom with Testing Library, with the network mocked.
+**Storefront: 184 tests in 15 files** (Vitest, in `Frontend/tests`). Logic tests run in Node. Component tests render the real components in jsdom with Testing Library, with the network mocked.
 
 | Area | What is checked |
 | --- | --- |
@@ -258,13 +270,13 @@ There are three layers, and CI runs all of them.
 
 Four of them are **contract tests**. The storefront and the API each keep their own copy of the shipping rules and the catalog, so that either can be deployed alone. These tests read the storefront's files and fail as soon as the two copies stop agreeing.
 
-**End to end: 58 tests in 5 files** (Playwright), against a production build of the storefront, the real API and a throwaway database, on desktop Chrome and a 375 pixel phone:
+**End to end: 71 tests in 6 files** (Playwright), against a production build of the storefront, the real API and a throwaway database, on desktop Chrome and a 375 pixel phone:
 
 - Browsing, filtering, the bag and Shade Match.
 - A real purchase, checked against the API afterwards, and a refused order.
 - The admin: signing in, shipping an order, cancelling one and seeing its stock return, restocking, and refusing negative stock.
 - Layout on a phone: no sideways scrolling on any page, the menu, the drawer and the stacked layouts.
-- The automated accessibility scans described above.
+- The automated accessibility scans, and tests of names, focus and announcements in the accessibility tree, both described above.
 
 ```bash
 npm test                # storefront and API tests

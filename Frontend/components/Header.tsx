@@ -18,7 +18,8 @@ export default function Header() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const badgeRef = useRef<HTMLSpanElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -54,6 +55,18 @@ export default function Header() {
     });
   }, [isMenuOpen]);
 
+  // Escape closes the mobile menu and hands focus back to its button.
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setIsMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isMenuOpen]);
+
   const closeMenu = () => setIsMenuOpen(false);
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -69,7 +82,7 @@ export default function Header() {
           <span className="absolute inset-x-0 bottom-0 h-px origin-left scale-x-[0.28] bg-accent transition-transform duration-500 ease-out group-hover:scale-x-100" />
         </Link>
 
-        <nav className="hidden items-center gap-10 sm:flex">
+        <nav aria-label="Main" className="hidden items-center gap-10 sm:flex">
           {navLinks.map((link) => {
             const active = isActive(link.href);
             return (
@@ -94,10 +107,12 @@ export default function Header() {
 
         <div className="flex items-center gap-1 justify-self-end">
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setIsMenuOpen((v) => !v)}
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMenuOpen}
+            aria-controls="mobile-menu"
             className="flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent-deep sm:hidden"
           >
             <svg
@@ -118,7 +133,8 @@ export default function Header() {
             type="button"
             onClick={open}
             data-cart-button
-            aria-label="Cart"
+            aria-label={itemCount > 0 ? `Cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : "Cart"}
+            aria-haspopup="dialog"
             className="relative flex h-11 w-11 items-center justify-center text-text transition-colors hover:text-accent-deep"
           >
             <svg
@@ -135,7 +151,10 @@ export default function Header() {
               <path d="M5.5 9h13l1 11.5a.5.5 0 0 1-.5.5h-14a.5.5 0 0 1-.5-.5L5.5 9Z" />
             </svg>
             {itemCount > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center overflow-hidden rounded-full bg-accent px-1 text-[10px] leading-none text-base">
+              <span
+                aria-hidden
+                className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center overflow-hidden rounded-full bg-accent px-1 text-[10px] leading-none text-base"
+              >
                 <span ref={badgeRef} className="block">
                   {itemCount}
                 </span>
@@ -145,8 +164,10 @@ export default function Header() {
         </div>
       </div>
 
-      <div
+      <nav
         ref={menuRef}
+        id="mobile-menu"
+        aria-label="Main"
         className="invisible absolute left-0 right-0 top-full flex flex-col border-b border-secondary/40 bg-base px-6 py-3 opacity-0 sm:hidden"
       >
         {navLinks.map((link) => (
@@ -162,7 +183,7 @@ export default function Header() {
             {link.label}
           </Link>
         ))}
-      </div>
+      </nav>
     </header>
   );
 }

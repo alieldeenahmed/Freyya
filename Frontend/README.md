@@ -132,7 +132,7 @@ Home scores 98 on desktop. Performance moves by several points between runs, so 
 
 ### Tests
 
-`npm test` runs 158 tests in 14 files. Logic tests run in Node and component tests run in jsdom with Testing Library, with `fetch` mocked. They cover:
+`npm test` runs 184 tests in 15 files. Logic tests run in Node and component tests run in jsdom with Testing Library, with `fetch` mocked. They cover:
 
 - quiz scoring, and the quiz component from the first question to the result
 - shop filtering, sorting and how the choice is read from and written to the URL
@@ -140,13 +140,14 @@ Home scores 98 on desktop. Performance moves by several points between runs, so 
 - the bag drawer as a modal: focus trap, Escape, inert background, quantities
 - checkout requests, how each kind of server error is turned into a message and a fix, and the form itself against a mocked API
 - the product page (shades, stock lines, accordion), the review form, and the custom dropdown's keyboard behaviour
+- what a screen reader depends on: names and landmarks, live-region announcements, and where focus lands after an action (`screen-readers.test.tsx`)
 - shipping and order totals, including the free-shipping threshold
 - review averages and ordering
 - catalog integrity, such as unique ids and valid related products
 
-`npm run test:e2e` runs 58 Playwright tests on desktop Chrome and a 375 pixel phone. It builds the storefront, starts the API on port 4010 and the storefront on port 3010, and resets a throwaway database first. That database comes from `TEST_DATABASE_URL` in `../Backend/.env.test`, and it must not be the one in `DATABASE_URL`. The suite covers browsing, a real purchase, the admin, phone layout, and axe scans of every page and the main interactive states.
+`npm run test:e2e` runs 71 Playwright tests on desktop Chrome and a 375 pixel phone. It builds the storefront, starts the API on port 4010 and the storefront on port 3010, and resets a throwaway database first. That database comes from `TEST_DATABASE_URL` in `../Backend/.env.test`, and it must not be the one in `DATABASE_URL`. The suite covers browsing, a real purchase, the admin, phone layout, axe scans of every page and the main interactive states (WCAG 2.0 to 2.2 A and AA, plus best practice), and `screen-reader.spec.ts`, which checks names, states and focus in the browser's accessibility tree.
 
-The scans find only a share of accessibility problems. See [`../docs/accessibility-testing.md`](../docs/accessibility-testing.md) for the manual checklist.
+These read what a screen reader is built from. They are not a substitute for using one. See [`../docs/accessibility-testing.md`](../docs/accessibility-testing.md) for the manual checklist.
 
 ## Project structure
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Field, fieldClass } from "@/components/Field";
 
@@ -14,6 +14,12 @@ export default function ContactForm() {
   const [fields, setFields] = useState<Fields>({ name: "", email: "", message: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const thanksRef = useRef<HTMLDivElement>(null);
+
+  // The form is replaced by the thank-you, which would drop focus. Move it to the message.
+  useEffect(() => {
+    if (sentTo) thanksRef.current?.focus();
+  }, [sentTo]);
 
   const set =
     (key: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -54,7 +60,7 @@ export default function ContactForm() {
 
   if (sentTo) {
     return (
-      <div role="status">
+      <div ref={thanksRef} role="status" tabIndex={-1} className="outline-none">
         <h2 className="font-serif text-3xl text-text">Thank you, {sentTo}.</h2>
         <p className="mt-4 max-w-sm text-text/70">
           In a live store this would reach our team. This is a demonstration, so nothing was

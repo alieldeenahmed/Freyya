@@ -76,7 +76,7 @@ export default function ProductShowcase({ product }: { product: Product }) {
                   />
                 )}
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-text/45 to-transparent" />
-                <span className="relative text-xs uppercase tracking-widest text-base">
+                <span aria-hidden className="relative text-xs uppercase tracking-widest text-base">
                   {caption}
                 </span>
               </div>

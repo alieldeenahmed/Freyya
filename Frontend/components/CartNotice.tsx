@@ -66,10 +66,19 @@ export default function CartNotice() {
   };
 
   return (
+    <>
+      {/* The sliding card starts out hidden, and screen readers can miss changes inside a hidden
+          region. This one is always present, so the announcement is reliable. */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {lastAdded && (
+          <span key={lastAdded.stamp}>
+            {lastAdded.name}
+            {lastAdded.variantName ? `, ${lastAdded.variantName},` : ""} added to your bag.
+          </span>
+        )}
+      </div>
     <div
       ref={noticeRef}
-      role="status"
-      aria-live="polite"
       onMouseEnter={() => timelineRef.current?.pause()}
       onMouseLeave={() => timelineRef.current?.resume()}
       className="invisible fixed right-4 top-[92px] z-[45] w-[calc(100vw-2rem)] max-w-sm border border-secondary/50 bg-base/95 opacity-0 shadow-[0_24px_48px_-28px_color-mix(in_srgb,var(--color-text)_45%,transparent)] backdrop-blur-sm sm:right-10"
@@ -110,5 +119,6 @@ export default function CartNotice() {
 
       <div ref={barRef} className="h-px origin-left bg-accent" />
     </div>
+    </>
   );
 }

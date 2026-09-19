@@ -11,7 +11,7 @@ test.describe("Checkout", () => {
 
     await page.goto("/shop/dawn-cleanse");
     await page.getByRole("button", { name: "Add to bag" }).click();
-    await page.getByRole("button", { name: "Cart", exact: true }).click();
+    await page.getByRole("button", { name: /^Cart(,|$)/ }).click();
     await page.getByRole("dialog", { name: "Your bag" }).getByRole("link", { name: "Checkout" }).click();
     await expect(page).toHaveURL(/\/checkout$/);
 
@@ -33,7 +33,7 @@ test.describe("Checkout", () => {
     expect(await stockOf(request, "dawn-cleanse")).toBe(stockBefore - 1);
 
     // The bag is empty, and the confirmation survives a refresh.
-    await expect(page.getByRole("button", { name: "Cart", exact: true })).not.toContainText("1");
+    await expect(page.getByRole("button", { name: /^Cart(,|$)/ })).not.toContainText("1");
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Thank you, Sara." })).toBeVisible();
   });

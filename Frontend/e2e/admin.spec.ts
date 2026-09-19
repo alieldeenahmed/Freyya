@@ -30,7 +30,7 @@ test.describe("Admin: signing in", () => {
     await signIn(page);
 
     await expect(page.getByRole("navigation", { name: "Admin" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cart", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Cart(,|$)/ })).toHaveCount(0);
     await expect(page.getByRole("contentinfo")).toHaveCount(0);
   });
 

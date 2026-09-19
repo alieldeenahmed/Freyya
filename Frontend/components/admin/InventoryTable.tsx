@@ -14,6 +14,9 @@ type Panel = { skuId: string; mode: "adjust" | "history" };
 const buttonClass =
   "text-xs uppercase tracking-[0.15em] text-text/65 transition-colors hover:text-accent-deep";
 
+const itemName = (item: InventoryItem) =>
+  item.variantName ? `${item.productName}, ${item.variantName}` : item.productName;
+
 function StockAdjuster({ item, onDone }: { item: InventoryItem; onDone: () => void }) {
   const router = useRouter();
   const [delta, setDelta] = useState("");
@@ -53,6 +56,9 @@ function StockAdjuster({ item, onDone }: { item: InventoryItem; onDone: () => vo
         <input
           id={`${id}-delta`}
           inputMode="numeric"
+          autoFocus
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-form-error` : undefined}
           placeholder="+10 or -2"
           value={delta}
           onChange={(e) => setDelta(e.target.value)}
@@ -93,7 +99,7 @@ function StockAdjuster({ item, onDone }: { item: InventoryItem; onDone: () => vo
         </button>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-accent-deep sm:col-span-4">
+        <p id={`${id}-form-error`} role="alert" className="text-sm text-accent-deep sm:col-span-4">
           {error}
         </p>
       )}
@@ -115,18 +121,35 @@ function History({ skuId }: { skuId: string }) {
     };
   }, [skuId]);
 
-  if (failed) return <p className="text-sm text-accent-deep">Could not load the history.</p>;
-  if (!movements) return <p className="text-sm text-text/65">Loading…</p>;
+  if (failed) {
+    return (
+      <p role="alert" className="text-sm text-accent-deep">
+        Could not load the history.
+      </p>
+    );
+  }
+  if (!movements) {
+    return (
+      <p role="status" className="text-sm text-text/65">
+        Loading…
+      </p>
+    );
+  }
 
   return (
-    <ul className="divide-y divide-secondary/40 text-sm">
+    <ul aria-label="Stock history" className="divide-y divide-secondary/40 text-sm">
       {movements.map((m) => (
         <li key={m.id} className="grid grid-cols-[9rem_5rem_4rem_1fr] items-baseline gap-4 py-2">
           <span className="text-text/65">{formatDateTime(m.at)}</span>
           <span className={`tabular-nums ${m.delta > 0 ? "text-text" : "text-text/70"}`}>
+            <span className="sr-only">Change </span>
             {m.delta > 0 ? `+${m.delta}` : m.delta}
           </span>
-          <span className="tabular-nums text-text/65">→ {m.stockAfter}</span>
+          <span className="tabular-nums text-text/65">
+            <span aria-hidden>→ </span>
+            <span className="sr-only">Stock after </span>
+            {m.stockAfter}
+          </span>
           <span className="text-text/70">
             <span className="uppercase tracking-[0.1em]">{m.reason}</span>
             {m.orderId && (
@@ -151,6 +174,12 @@ export default function InventoryTable({ items }: { items: InventoryItem[] }) {
 
   const toggle = (skuId: string, mode: Panel["mode"]) =>
     setPanel((current) => (current?.skuId === skuId && current.mode === mode ? null : { skuId, mode }));
+
+  // The form and its Save button disappear when it closes. Return focus to the button that opened it.
+  const closeAdjuster = (skuId: string) => {
+    setPanel(null);
+    window.setTimeout(() => document.getElementById(`${skuId}-adjust-button`)?.focus(), 0);
+  };
 
   return (
     <div className="relative overflow-x-auto" data-lenis-prevent>
@@ -198,7 +227,9 @@ export default function InventoryTable({ items }: { items: InventoryItem[] }) {
                   <td className="py-4 text-right">
                     <span className="inline-flex gap-5">
                       <button
+                        id={`${item.skuId}-adjust-button`}
                         type="button"
+                        aria-label={`Adjust stock, ${itemName(item)}`}
                         aria-expanded={open === "adjust"}
                         onClick={() => toggle(item.skuId, "adjust")}
                         className={buttonClass}
@@ -207,6 +238,7 @@ export default function InventoryTable({ items }: { items: InventoryItem[] }) {
                       </button>
                       <button
                         type="button"
+                        aria-label={`History, ${itemName(item)}`}
                         aria-expanded={open === "history"}
                         onClick={() => toggle(item.skuId, "history")}
                         className={buttonClass}
@@ -220,7 +252,7 @@ export default function InventoryTable({ items }: { items: InventoryItem[] }) {
                   <tr className="border-b border-secondary/40 bg-secondary/10">
                     <td colSpan={3} className="px-1 py-6">
                       {open === "adjust" ? (
-                        <StockAdjuster item={item} onDone={() => setPanel(null)} />
+                        <StockAdjuster item={item} onDone={() => closeAdjuster(item.skuId)} />
                       ) : (
                         <History skuId={item.skuId} />
                       )}

@@ -7,7 +7,7 @@ import { createPaidOrder, seedBag, signIn } from "./helpers";
 // screen reader and a keyboard, so they are one layer of the accessibility work, not all of it.
 test.use({ reducedMotion: "reduce" });
 
-const RULES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
+const RULES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
 
 async function expectNoViolations(page: Page, label: string) {
   await page.waitForLoadState("networkidle");
@@ -63,7 +63,7 @@ test.describe("Automated accessibility scans: storefront", () => {
   test("the bag drawer, open with items in it", async ({ page }) => {
     await seedBag(page, [{ id: "freyya-balm:petal", productId: "freyya-balm", variantId: "petal", quantity: 2 }]);
     await page.goto("/");
-    await page.getByRole("button", { name: "Cart", exact: true }).click();
+    await page.getByRole("button", { name: /^Cart(,|$)/ }).click();
     await expect(page.getByRole("dialog", { name: "Your bag" })).toBeInViewport();
 
     await expectNoViolations(page, "open bag drawer");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Select from "@/components/Select";
 import { Star } from "@/components/StarRating";
 import type { Review } from "@/lib/types";
@@ -16,27 +16,41 @@ const labelClass = "text-[11px] uppercase tracking-[0.2em] text-text/65";
 function StarInput({
   value,
   onChange,
+  describedBy,
 }: {
   value: number;
   onChange: (rating: number) => void;
+  describedBy?: string;
 }) {
   const [hover, setHover] = useState(0);
   const active = hover || value;
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // In a radio group the arrow keys move focus and select together, so the reader
+  // announces the star you landed on.
+  const choose = (next: number) => {
+    onChange(next);
+    buttons.current[next - 1]?.focus();
+  };
 
   const handleKey = (e: React.KeyboardEvent) => {
+    // Move from the star that has focus, as a native radio group does, even before any is chosen.
+    const from = buttons.current.findIndex((b) => b === document.activeElement) + 1 || value;
     if (e.key === "ArrowRight" || e.key === "ArrowUp") {
       e.preventDefault();
-      onChange(Math.min(5, (value || 0) + 1));
+      choose(Math.min(5, from + 1));
     } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
       e.preventDefault();
-      onChange(Math.max(1, (value || 2) - 1));
+      choose(Math.max(1, from - 1));
     }
   };
 
   return (
     <div
+      id="review-rating"
       role="radiogroup"
       aria-label="Your rating"
+      aria-describedby={describedBy}
       className="-ml-1 flex items-center"
       onMouseLeave={() => setHover(0)}
       onKeyDown={handleKey}
@@ -44,6 +58,9 @@ function StarInput({
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
+          ref={(el) => {
+            buttons.current[n - 1] = el;
+          }}
           type="button"
           role="radio"
           aria-checked={value === n}
@@ -101,7 +118,16 @@ export default function ReviewForm({
     e.preventDefault();
     const found = validate();
     setErrors(found);
-    if (Object.keys(found).length) return;
+    const first = (["rating", "title", "body", "name"] as const).find((key) => found[key]);
+    if (first) {
+      // Send focus to the first mistake, as the checkout and contact forms do.
+      const target =
+        first === "rating"
+          ? document.querySelector<HTMLElement>('#review-rating [role="radio"][tabindex="0"]')
+          : document.getElementById(`review-${first}`);
+      target?.focus();
+      return;
+    }
 
     onSubmit({
       id: `u-${Date.now()}`,
@@ -116,9 +142,12 @@ export default function ReviewForm({
     });
   };
 
+  const errorId = (key: keyof Errors) => `review-${key}-error`;
+  const describe = (key: keyof Errors) => (errors[key] ? errorId(key) : undefined);
+
   const error = (key: keyof Errors) =>
     errors[key] ? (
-      <p role="alert" className="mt-2 text-xs text-accent-deep">
+      <p id={errorId(key)} role="alert" className="mt-2 text-xs text-accent-deep">
         {errors[key]}
       </p>
     ) : null;
@@ -135,7 +164,7 @@ export default function ReviewForm({
       <div className="mt-6">
         <p className={labelClass}>Rating</p>
         <div className="mt-2">
-          <StarInput value={rating} onChange={setRating} />
+          <StarInput value={rating} onChange={setRating} describedBy={describe("rating")} />
         </div>
         {error("rating")}
       </div>
@@ -151,6 +180,7 @@ export default function ReviewForm({
           maxLength={LIMITS.titleMax}
           onChange={(e) => setTitle(e.target.value)}
           aria-invalid={Boolean(errors.title)}
+          aria-describedby={describe("title")}
           placeholder="Sum it up in a few words"
           className={fieldClass}
         />
@@ -173,6 +203,7 @@ export default function ReviewForm({
           maxLength={LIMITS.bodyMax}
           onChange={(e) => setBody(e.target.value)}
           aria-invalid={Boolean(errors.body)}
+          aria-describedby={describe("body")}
           placeholder="What did you notice? How did it feel, look, last?"
           className={`${fieldClass} resize-none`}
         />
@@ -191,6 +222,7 @@ export default function ReviewForm({
             maxLength={LIMITS.nameMax}
             onChange={(e) => setName(e.target.value)}
             aria-invalid={Boolean(errors.name)}
+            aria-describedby={describe("name")}
             autoComplete="given-name"
             placeholder="Amira"
             className={fieldClass}

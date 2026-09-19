@@ -36,6 +36,7 @@ export default function ProductReviews({
   const [formKey, setFormKey] = useState(0);
   const [justPosted, setJustPosted] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const visible = showAll ? reviews : reviews.slice(0, INITIAL_COUNT);
   const hasReviewed = mine.length > 0;
@@ -47,6 +48,19 @@ export default function ProductReviews({
       () => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
       350
     );
+  };
+
+  // The panel is inert until it opens, so move focus in once it is live.
+  useEffect(() => {
+    if (!formOpen) return;
+    formRef.current
+      ?.querySelector<HTMLElement>('[role="radio"][tabindex="0"]')
+      ?.focus({ preventScroll: true });
+  }, [formOpen, formKey]);
+
+  const closeForm = () => {
+    setFormOpen(false);
+    triggerRef.current?.focus();
   };
 
   const handleSubmit = (review: Review) => {
@@ -62,6 +76,8 @@ export default function ProductReviews({
     if (!el) return;
 
     const timer = window.setTimeout(() => {
+      // Read the new review aloud, and keep keyboard focus from being lost with the form.
+      el.focus({ preventScroll: true });
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       if (!prefersReducedMotion()) {
         gsap.fromTo(
@@ -81,6 +97,7 @@ export default function ProductReviews({
     </p>
   ) : (
     <button
+      ref={triggerRef}
       type="button"
       onClick={openForm}
       aria-expanded={formOpen}
@@ -104,7 +121,7 @@ export default function ProductReviews({
           productId={productId}
           shades={shades}
           onSubmit={handleSubmit}
-          onCancel={() => setFormOpen(false)}
+          onCancel={closeForm}
         />
       </div>
     </div>
@@ -152,14 +169,18 @@ export default function ProductReviews({
                   const pct = summary.count ? (count / summary.count) * 100 : 0;
                   return (
                     <li key={star} className="flex items-center gap-4 text-xs text-text/65">
-                      <span className="w-3 tabular-nums">{star}</span>
-                      <span className="relative h-px flex-1 bg-secondary/50">
+                      <span className="sr-only">
+                        {count} {count === 1 ? "review" : "reviews"} with {star}{" "}
+                        {star === 1 ? "star" : "stars"}
+                      </span>
+                      <span aria-hidden className="w-3 tabular-nums">{star}</span>
+                      <span aria-hidden className="relative h-px flex-1 bg-secondary/50">
                         <span
                           className="absolute inset-y-0 left-0 h-[3px] -translate-y-px bg-accent transition-[width] duration-700 ease-out"
                           style={{ width: `${pct}%` }}
                         />
                       </span>
-                      <span className="w-4 text-right tabular-nums">{count}</span>
+                      <span aria-hidden className="w-4 text-right tabular-nums">{count}</span>
                     </li>
                   );
                 })}
@@ -176,7 +197,8 @@ export default function ProductReviews({
                   <li
                     key={review.id}
                     id={`review-${review.id}`}
-                    className="border-b border-secondary/40 py-8 first:pt-0"
+                    tabIndex={-1}
+                    className="border-b border-secondary/40 py-8 outline-none first:pt-0"
                   >
                     <StarRating rating={review.rating} />
                     <h3 className="mt-4 font-serif text-2xl text-text">

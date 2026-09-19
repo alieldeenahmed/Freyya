@@ -16,9 +16,21 @@ export default function Quiz() {
   const [answers, setAnswers] = useState<Answers>({});
   const stepRef = useRef<HTMLDivElement>(null);
   const shopLinkRef = useRef<HTMLAnchorElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const isFirstStep = useRef(true);
   const isResult = step === QUESTIONS.length;
 
   useMagnetic(shopLinkRef, 0.25);
+
+  // The button that was pressed disappears with its question. Put focus on the new
+  // heading so a screen reader reads the next question, or the result.
+  useEffect(() => {
+    if (isFirstStep.current) {
+      isFirstStep.current = false;
+      return;
+    }
+    headingRef.current?.focus({ preventScroll: true });
+  }, [step]);
 
   useEffect(() => {
     const el = stepRef.current;
@@ -68,7 +80,10 @@ export default function Quiz() {
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 py-24 sm:px-10">
       <div className="w-full max-w-lg">
         {!isResult && (
-          <p className="mb-8 text-center text-xs uppercase tracking-widest text-text/65">
+          <p
+            aria-live="polite"
+            className="mb-8 text-center text-xs uppercase tracking-widest text-text/65"
+          >
             Step {step + 1} of {QUESTIONS.length}
           </p>
         )}
@@ -76,10 +91,19 @@ export default function Quiz() {
         <div ref={stepRef}>
           {!isResult ? (
             <div>
-              <h1 className="text-center font-serif text-3xl text-text sm:text-4xl">
+              <h1
+                ref={headingRef}
+                id="quiz-question"
+                tabIndex={-1}
+                className="text-center font-serif text-3xl text-text outline-none sm:text-4xl"
+              >
                 {QUESTIONS[step].prompt}
               </h1>
-              <div className="mt-10 flex flex-col gap-3">
+              <div
+                role="group"
+                aria-labelledby="quiz-question"
+                className="mt-10 flex flex-col gap-3"
+              >
                 {QUESTIONS[step].options.map((option) => (
                   <button
                     key={option.id}
@@ -106,7 +130,11 @@ export default function Quiz() {
                   className="object-cover"
                 />
               </div>
-              <h1 className="mt-6 font-serif text-3xl text-text sm:text-4xl">
+              <h1
+                ref={headingRef}
+                tabIndex={-1}
+                className="mt-6 font-serif text-3xl text-text outline-none sm:text-4xl"
+              >
                 {resultVariant.name}
               </h1>
               <p className="mt-2 text-text/70">{resultProduct.name}</p>

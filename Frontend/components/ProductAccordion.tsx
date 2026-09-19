@@ -61,6 +61,7 @@ export default function ProductAccordion({ details }: { details: ProductDetails 
         return (
           <div key={section.key} className="border-b border-secondary/40">
             <button
+              id={`${panelId}-button`}
               type="button"
               onClick={() => toggle(section.key)}
               aria-expanded={open}
@@ -86,6 +87,9 @@ export default function ProductAccordion({ details }: { details: ProductDetails 
             <div
               id={panelId}
               role="region"
+              aria-labelledby={`${panelId}-button`}
+              // A closed panel is only squeezed to no height, so hide it from readers and Tab too.
+              inert={!open}
               className={`grid transition-[grid-template-rows,opacity] duration-500 ease-out motion-reduce:transition-none ${
                 open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
               }`}

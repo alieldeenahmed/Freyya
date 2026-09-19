@@ -205,6 +205,7 @@ export default function ProductDetail({
             {gallery.map((src, i) => (
               <div
                 key={src}
+                aria-hidden={src === activeImage ? undefined : true}
                 className={`absolute inset-0 transition-opacity duration-500 ${
                   src === activeImage ? "opacity-100" : "opacity-0"
                 }`}
@@ -236,6 +237,9 @@ export default function ProductDetail({
           {rating.count > 0 && (
             <button
               type="button"
+              aria-label={`Rated ${rating.average.toFixed(1)} out of 5 from ${rating.count} ${
+                rating.count === 1 ? "review" : "reviews"
+              }. Go to reviews`}
               onClick={() =>
                 document
                   .getElementById("reviews")
@@ -267,7 +271,9 @@ export default function ProductDetail({
           </ul>
 
           <p className="mt-8 font-serif text-2xl text-text">${product.price}</p>
+          {/* Polite, so choosing another shade announces that shade's stock. */}
           <p
+            role="status"
             className={`mt-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] ${
               soldOut
                 ? "text-text/65"
@@ -294,8 +300,8 @@ export default function ProductDetail({
           </p>
 
           {product.variants && (
-            <div className="mt-8">
-              <p className="text-xs uppercase tracking-widest text-text/65">
+            <div className="mt-8" role="group" aria-labelledby="shade-label">
+              <p id="shade-label" className="text-xs uppercase tracking-widest text-text/65">
                 Shade — {selectedVariant?.name}
               </p>
               <div className="mt-3 flex gap-3">

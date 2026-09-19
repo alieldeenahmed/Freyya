@@ -48,7 +48,7 @@ export default function ProductCard({
         <div className="relative h-full w-full transition-transform duration-500 ease-out group-hover:scale-105">
           <FadeImage
             src={product.image}
-            alt={product.name}
+            alt=""
             fill
             priority={priority}
             sizes="(min-width: 1024px) 384px, (min-width: 640px) 45vw, 100vw"

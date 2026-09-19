@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import FadeImage from "@/components/FadeImage";
 import { gsap } from "@/lib/gsap";
@@ -17,6 +17,22 @@ export default function CartDrawer() {
   const panelRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [announcement, setAnnouncement] = useState("");
+
+  const changeQuantity = (item: (typeof items)[number], quantity: number) => {
+    updateQuantity(item.id, quantity);
+    const label = item.variantName ? `${item.name}, ${item.variantName}` : item.name;
+    setAnnouncement(
+      quantity <= 0 ? `${label} removed from your bag.` : `${label}, quantity ${quantity}.`
+    );
+  };
+
+  const remove = (item: (typeof items)[number]) => {
+    removeItem(item.id);
+    setAnnouncement(
+      `${item.variantName ? `${item.name}, ${item.variantName}` : item.name} removed from your bag.`
+    );
+  };
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -88,6 +104,17 @@ export default function CartDrawer() {
     };
   }, [isOpen, close]);
 
+  // Removing an item deletes the button that had focus. Keep focus inside the drawer.
+  // This sits after the modal effect, which has to record the opener before focus moves.
+  const lineCount = items.length;
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!isOpen || !panel || panel.contains(document.activeElement)) return;
+    (panel.querySelector<HTMLElement>("[data-remove]") ?? closeButtonRef.current)?.focus({
+      preventScroll: true,
+    });
+  }, [isOpen, lineCount]);
+
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const freeShippingRemaining = FREE_SHIPPING_THRESHOLD - subtotal;
 
@@ -124,13 +151,13 @@ export default function CartDrawer() {
         {items.length === 0 ? (
           <p className="mt-8 text-sm text-text/65">Your bag is empty.</p>
         ) : (
-          <div className="mt-6 flex-1 space-y-6 overflow-y-auto overscroll-contain">
+          <ul className="mt-6 flex-1 space-y-6 overflow-y-auto overscroll-contain">
             {items.map((item) => (
-              <div key={item.id} className="flex gap-4">
+              <li key={item.id} className="flex gap-4">
                 <div className="skeleton relative h-20 w-16 flex-shrink-0 overflow-hidden">
                   <FadeImage
                     src={item.image}
-                    alt={item.name}
+                    alt=""
                     fill
                     sizes="64px"
                     className="object-cover"
@@ -153,18 +180,16 @@ export default function CartDrawer() {
                   <div className="mt-2 flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      onClick={() => changeQuantity(item, item.quantity - 1)}
                       aria-label={`Decrease quantity of ${item.name}`}
                       className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent-deep"
                     >
                       −
                     </button>
-                    <span className="text-sm text-text" aria-live="polite">
-                      {item.quantity}
-                    </span>
+                    <span className="text-sm text-text">{item.quantity}</span>
                     <button
                       type="button"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      onClick={() => changeQuantity(item, item.quantity + 1)}
                       disabled={item.quantity >= item.stock}
                       aria-label={`Increase quantity of ${item.name}`}
                       className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent-deep disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-secondary/50 disabled:hover:text-text/70"
@@ -173,7 +198,8 @@ export default function CartDrawer() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeItem(item.id)}
+                      data-remove
+                      onClick={() => remove(item)}
                       aria-label={`Remove ${item.name} from bag`}
                       className="ml-auto text-xs uppercase tracking-wide text-text/65 transition-colors hover:text-accent-deep"
                     >
@@ -181,10 +207,14 @@ export default function CartDrawer() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
+
+        <p role="status" aria-live="polite" className="sr-only">
+          {announcement}
+        </p>
 
         {items.length > 0 && (
           <div className="border-t border-secondary/40 pt-6">

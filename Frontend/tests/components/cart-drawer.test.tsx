@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CartDrawer from "@/components/CartDrawer";
 import { useCart } from "@/lib/cart-context";
@@ -188,11 +188,40 @@ describe("Cart drawer quantities", () => {
     expect(savedCart().map((i: { id: string }) => i.id)).toEqual(["veil-spf"]);
   });
 
-  it("announces quantity changes to screen readers", async () => {
+  it("announces a quantity change, with the product, to screen readers", async () => {
     seed(line("dawn-cleanse", "dawn-cleanse", 1));
+    const user = await openBag();
+    const announcer = () => within(dialog()).getByRole("status");
+
+    expect(announcer().textContent).toBe("");
+    await user.click(screen.getByRole("button", { name: "Increase quantity of Dawn Cleanse" }));
+
+    expect(announcer().textContent).toBe("Dawn Cleanse, quantity 2.");
+  });
+
+  it("announces a removal, and keeps focus in the drawer when the button is gone", async () => {
+    seed(line("dawn-cleanse", "dawn-cleanse", 2), line("veil-spf", "veil-spf", 1));
+    const user = await openBag();
+
+    await user.click(screen.getByRole("button", { name: "Remove Dawn Cleanse from bag" }));
+
+    expect(within(dialog()).getByRole("status").textContent).toBe("Dawn Cleanse removed from your bag.");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Remove Veil SPF from bag" }));
+  });
+
+  it("moves focus to the close button when the last item goes", async () => {
+    seed(line("dawn-cleanse", "dawn-cleanse", 1));
+    const user = await openBag();
+
+    await user.click(screen.getByRole("button", { name: "Remove Dawn Cleanse from bag" }));
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Close cart" }));
+  });
+
+  it("lists the items as a list", async () => {
+    seed(line("dawn-cleanse", "dawn-cleanse", 1), line("veil-spf", "veil-spf", 1));
     await openBag();
 
-    const quantity = screen.getByText("1", { selector: "span[aria-live]" });
-    expect(quantity.getAttribute("aria-live")).toBe("polite");
+    expect(within(dialog()).getAllByRole("listitem")).toHaveLength(2);
   });
 });

@@ -2,9 +2,11 @@
 
 ## Where this stands
 
-- **Automated scans: done.** `Frontend/e2e/accessibility.spec.ts` runs axe against every storefront page, the main interactive states and the admin, using the WCAG 2.0 and 2.1 A and AA rules. They run in CI.
-- **Keyboard and focus behaviour: checked by hand** during development, and covered by component tests (focus trap, Escape, arrow keys, focus on first invalid field).
+- **Automated scans: done.** `Frontend/e2e/accessibility.spec.ts` runs axe against every storefront page, the main interactive states and the admin, using the WCAG 2.0, 2.1 and 2.2 A and AA rules plus axe's best-practice rules. They run in CI.
+- **Accessibility tree and focus: tested.** `Frontend/e2e/screen-reader.spec.ts` (in a real browser) and `Frontend/tests/components/screen-readers.test.tsx` check names, states, landmarks, live-region text, and where focus lands after each action. This covers most of the checklist below in principle: it proves the site *says* the right thing to the browser. It does not prove a reader *speaks* it well.
 - **Screen reader: not done.** Nobody has yet listened to the site with NVDA, VoiceOver or TalkBack. Until that happens, the project makes no claim of compliance.
+
+The checklist is written so you can confirm, by ear, what the tests already confirm by code. Focus on anything that sounds wrong, too long, repeated or missing.
 
 Automated tools find a minority of real problems. They cannot tell whether a label makes sense, whether the reading order is sensible, or whether an announcement is helpful. That is what this checklist is for.
 
