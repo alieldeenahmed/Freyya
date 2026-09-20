@@ -36,7 +36,22 @@ jobs:
       # Logic and component tests. No browser or database needed.
       - run: npm test
       # With no API reachable the build uses the bundled catalog, which is what we want here.
+      # The server-only settings are given recognisable fake values, so the next step can prove
+      # that none of them ends up in a file a browser downloads.
       - run: npm run build
+        env:
+          API_URL: http://sentinel-api.example:4999
+          DATABASE_URL: postgresql://sentinel:sentinelpass@sentinel-db.example/freyya
+          ADMIN_EMAIL: sentinel-admin@example.com
+          ADMIN_PASSWORD_HASH: scrypt$0123456789abcdef$0123456789abcdef0123456789abcdef
+      - run: npm run check:bundle
+        env:
+          API_URL: http://sentinel-api.example:4999
+          DATABASE_URL: postgresql://sentinel:sentinelpass@sentinel-db.example/freyya
+          ADMIN_EMAIL: sentinel-admin@example.com
+          ADMIN_PASSWORD_HASH: scrypt$0123456789abcdef$0123456789abcdef0123456789abcdef
+      # Fails if a page's JavaScript has grown past its budget in perf-budget.json.
+      - run: npm run perf
 
   api:
     name: API (types, build, tests on Postgres)
@@ -71,6 +86,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+      # The storefront's copy of the catalog and shop rules is generated from the API's own files.
+      # This fails if it is out of date, and says which command brings it up to date.
+      - run: npm run sync:data:check
       # Create the tables in the empty database. The tests would refuse to run if
       # DATABASE_URL matched TEST_DATABASE_URL, so it is set for this step only.
       - run: npm run db:migrate

@@ -5,6 +5,7 @@ import {
   adjustStockSchema,
   listOrdersQuerySchema,
   loginSchema,
+  safeId,
   transitionSchema,
 } from "../schemas.js";
 import {
@@ -105,12 +106,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     );
 
     secured.get<{ Params: { id: string } }>("/orders/:id", async (request) => ({
-      order: await getOrderDetail(db, request.params.id),
+      order: await getOrderDetail(db, safeId(request.params.id)),
     }));
 
     secured.patch<{ Params: { id: string } }>("/orders/:id/status", async (request) => {
       const { status } = transitionSchema.parse(request.body);
-      return { order: await transitionOrder(db, request.params.id, status, request.admin!.email) };
+      return { order: await transitionOrder(db, safeId(request.params.id), status, request.admin!.email) };
     });
 
     secured.get("/inventory", async () => ({
@@ -118,12 +119,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     }));
 
     secured.get<{ Params: { skuId: string } }>("/inventory/:skuId/movements", async (request) => ({
-      movements: await listMovements(db, request.params.skuId),
+      movements: await listMovements(db, safeId(request.params.skuId)),
     }));
 
     secured.post<{ Params: { skuId: string } }>("/inventory/:skuId/adjust", async (request) => {
       const change = adjustStockSchema.parse(request.body);
-      return adjustStock(db, request.params.skuId, change, request.admin!.email);
+      return adjustStock(db, safeId(request.params.skuId), change, request.admin!.email);
     });
   });
 };

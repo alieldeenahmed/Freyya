@@ -5,6 +5,9 @@ import { API_URL } from "@/lib/catalog";
 
 export const ADMIN_COOKIE = "freyya_admin";
 
+// The admin pages are rendered on the server, so a stuck API must not hold a render open.
+const API_TIMEOUT_MS = 10_000;
+
 // Server-side calls to the admin API, made as the signed-in admin by passing their
 // session cookie along. Not signed in, or a session that has run out, means the login page.
 export async function adminFetch<T>(path: string): Promise<T> {
@@ -14,6 +17,7 @@ export async function adminFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}/admin${path}`, {
     headers: { cookie: `${ADMIN_COOKIE}=${token}` },
     cache: "no-store",
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
 
   if (res.status === 401) redirect("/admin/login");
@@ -35,6 +39,7 @@ export async function currentAdmin(): Promise<{ email: string } | null> {
     const res = await fetch(`${API_URL}/admin/me`, {
       headers: { cookie: `${ADMIN_COOKIE}=${token}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     return ((await res.json()) as { admin: { email: string } }).admin;

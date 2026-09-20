@@ -92,6 +92,8 @@ export const orders = pgTable(
     id: text("id").primaryKey(),
     // Lets a client retry a checkout request without creating a second order.
     idempotencyKey: text("idempotency_key").unique(),
+    // A hash of what the key was first used for. The same key with a different order is refused.
+    idempotencyFingerprint: text("idempotency_fingerprint"),
     email: text("email").notNull(),
     name: text("name").notNull(),
     addressLine1: text("address_line1").notNull(),

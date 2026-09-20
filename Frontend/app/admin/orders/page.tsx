@@ -91,7 +91,7 @@ export default async function AdminOrdersPage({
               name="search"
               defaultValue={search}
               placeholder="Number, name or email"
-              className="mt-1 w-56 border-0 border-b border-secondary/60 bg-transparent py-2 text-sm text-text placeholder:text-text/65 focus:border-accent focus:outline-none"
+              className="mt-1 w-56 border-0 border-b border-secondary/60 bg-transparent py-2 text-sm text-text placeholder:text-text/65 focus:border-accent-deep focus:shadow-[0_1px_0_0_var(--color-accent-deep)] focus:outline-none"
             />
           </div>
           <button
@@ -107,38 +107,60 @@ export default async function AdminOrdersPage({
         {orders.items.length === 0 ? (
           <p className="py-12 text-sm text-text/65">No orders match.</p>
         ) : (
-          <table className="w-full min-w-[40rem] text-left text-sm">
-            <thead>
-              <tr className="border-b border-secondary/40 text-[11px] uppercase tracking-[0.2em] text-text/65">
-                <th scope="col" className="py-3 pr-4 font-normal">Order</th>
-                <th scope="col" className="py-3 pr-4 font-normal">Placed</th>
-                <th scope="col" className="py-3 pr-4 font-normal">Customer</th>
-                <th scope="col" className="py-3 pr-4 text-right font-normal">Items</th>
-                <th scope="col" className="py-3 pr-4 text-right font-normal">Total</th>
-                <th scope="col" className="py-3 font-normal">Status</th>
+          <table role="table" className="w-full text-left text-sm max-sm:block sm:min-w-[40rem]">
+            <thead role="rowgroup" className="max-sm:sr-only">
+              <tr role="row" className="border-b border-secondary/40 text-[11px] uppercase tracking-[0.2em] text-text/65">
+                <th role="columnheader" scope="col" className="py-3 pr-4 font-normal">Order</th>
+                <th role="columnheader" scope="col" className="py-3 pr-4 font-normal">Placed</th>
+                <th role="columnheader" scope="col" className="py-3 pr-4 font-normal">Customer</th>
+                <th role="columnheader" scope="col" className="py-3 pr-4 text-right font-normal">Items</th>
+                <th role="columnheader" scope="col" className="py-3 pr-4 text-right font-normal">Total</th>
+                <th role="columnheader" scope="col" className="py-3 font-normal">Status</th>
               </tr>
             </thead>
-            <tbody>
+            {/* On a phone each order becomes a small card. The table roles are written out so
+                assistive technology still reads it as a table once its layout is changed. */}
+            <tbody role="rowgroup" className="max-sm:block">
               {orders.items.map((order) => (
-                <tr key={order.id} className="border-b border-secondary/40">
-                  <td className="py-4 pr-4">
+                <tr
+                  key={order.id}
+                  role="row"
+                  className="border-b border-secondary/40 max-sm:grid max-sm:grid-cols-[1fr_auto] max-sm:items-baseline max-sm:gap-x-4 max-sm:py-5"
+                >
+                  <td role="cell" className="py-4 pr-4 max-sm:order-1 max-sm:py-0 max-sm:pr-0">
                     <Link
                       href={`/admin/orders/${order.id}`}
-                      className="border-b border-accent text-text transition-colors hover:text-accent-deep"
+                      className="inline-flex min-h-11 items-center border-b border-accent text-text transition-colors hover:text-accent-deep sm:min-h-0"
                     >
                       {order.id}
                     </Link>
                   </td>
-                  <td className="py-4 pr-4 text-text/70">{formatDateTime(order.placedAt)}</td>
-                  <td className="py-4 pr-4">
-                    <span className="block text-text">{order.name}</span>
-                    <span className="block text-xs text-text/65">{order.email}</span>
+                  <td
+                    role="cell"
+                    data-label="Placed"
+                    className="py-4 pr-4 text-text/70 max-sm:order-4 max-sm:col-span-2 max-sm:py-0 max-sm:pr-0 max-sm:text-xs max-sm:before:mr-2 max-sm:before:uppercase max-sm:before:tracking-[0.15em] max-sm:before:content-[attr(data-label)]"
+                  >
+                    {formatDateTime(order.placedAt)}
                   </td>
-                  <td className="py-4 pr-4 text-right tabular-nums text-text/70">{order.itemCount}</td>
-                  <td className="py-4 pr-4 text-right tabular-nums text-text">
+                  <td role="cell" className="py-4 pr-4 max-sm:order-3 max-sm:col-span-2 max-sm:py-0 max-sm:pr-0">
+                    <span className="block text-text">{order.name}</span>
+                    <span className="block break-all text-xs text-text/65">{order.email}</span>
+                  </td>
+                  <td
+                    role="cell"
+                    data-label="Items"
+                    className="py-4 pr-4 text-right tabular-nums text-text/70 max-sm:order-5 max-sm:py-0 max-sm:pr-0 max-sm:text-left max-sm:text-xs max-sm:before:mr-2 max-sm:before:uppercase max-sm:before:tracking-[0.15em] max-sm:before:content-[attr(data-label)]"
+                  >
+                    {order.itemCount}
+                  </td>
+                  <td
+                    role="cell"
+                    data-label="Total"
+                    className="py-4 pr-4 text-right tabular-nums text-text max-sm:order-6 max-sm:py-0 max-sm:pr-0 max-sm:before:mr-2 max-sm:before:text-xs max-sm:before:uppercase max-sm:before:tracking-[0.15em] max-sm:before:text-text/65 max-sm:before:content-[attr(data-label)]"
+                  >
                     {formatMoney(order.total)}
                   </td>
-                  <td className="py-4">
+                  <td role="cell" className="py-4 max-sm:order-2 max-sm:justify-self-end max-sm:py-0">
                     <StatusBadge status={order.status} />
                   </td>
                 </tr>

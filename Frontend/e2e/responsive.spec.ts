@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { seedBag, signIn } from "./helpers";
+import { createPaidOrder, seedBag, signIn } from "./helpers";
 
 // These run on a 375 pixel wide phone (see the "mobile" project in playwright.config.ts).
 
@@ -108,5 +108,111 @@ test.describe("On a phone", () => {
       await page.waitForLoadState("networkidle");
       expect(await overflow(page), path).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+// The same checks from a narrow phone to a large desktop, since the layout only has a few
+// breakpoints and each of them has to hold up.
+test.describe("From a narrow phone to a large desktop", () => {
+  for (const width of [320, 768, 1024, 1920]) {
+    test(`no page scrolls sideways at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await seedBag(page, [{ id: "dawn-cleanse", productId: "dawn-cleanse", quantity: 2 }]);
+
+      for (const path of [...PAGES, "/checkout", "/not-a-page"]) {
+        await page.goto(path);
+        expect(await overflow(page), `${path} at ${width}px`).toBeLessThanOrEqual(1);
+      }
+    });
+  }
+
+  test("the bag drawer fits a 320 pixel screen", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await seedBag(page, [{ id: "dawn-cleanse", productId: "dawn-cleanse", quantity: 2 }]);
+    await page.goto("/");
+    await page.getByRole("button", { name: /^Cart(,|$)/ }).click();
+
+    const drawer = page.getByRole("dialog", { name: "Your bag" });
+    await expect.poll(async () => (await drawer.boundingBox())!.x + (await drawer.boundingBox())!.width).toBeLessThanOrEqual(321);
+    await expect(drawer.getByRole("link", { name: "Checkout" })).toBeInViewport();
+  });
+});
+
+test.describe("Controls that are big enough to tap on a phone", () => {
+  const box = async (locator: import("@playwright/test").Locator) => (await locator.boundingBox())!;
+  const bigEnough = async (locator: import("@playwright/test").Locator, label: string) => {
+    const b = await box(locator);
+    expect(b.height, `${label} height`).toBeGreaterThanOrEqual(39.5);
+    expect(b.width, `${label} width`).toBeGreaterThanOrEqual(39.5);
+  };
+
+  test("the header, the bag and the newsletter", async ({ page }) => {
+    await page.goto("/");
+    await bigEnough(page.getByRole("button", { name: "Open menu" }), "menu button");
+    await bigEnough(page.getByRole("button", { name: /^Cart(,|$)/ }), "bag button");
+    await bigEnough(page.getByRole("button", { name: "Join" }), "newsletter button");
+  });
+
+  test("a product page: shade swatches, the rating, the review form and the way back", async ({ page }) => {
+    await page.goto("/shop/freyya-balm");
+    for (const shade of ["Bare", "Petal", "Rosewood", "Terracotta"]) {
+      await bigEnough(page.getByRole("button", { name: shade }), `${shade} swatch`);
+    }
+    await bigEnough(page.getByRole("button", { name: /Go to reviews/ }), "rating button");
+    await bigEnough(page.getByRole("link", { name: "Back to shop" }), "back link");
+
+    await page.getByRole("button", { name: "Write a review" }).click();
+    for (const stars of ["1 star", "5 stars"]) await bigEnough(page.getByRole("radio", { name: stars }), stars);
+    await bigEnough(page.getByRole("button", { name: "Cancel" }), "cancel button");
+    // Five stars and their label fit a narrow screen without pushing the page sideways.
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+  });
+
+  test("checkout: the way back to the shop", async ({ page }) => {
+    await seedBag(page, [{ id: "dawn-cleanse", productId: "dawn-cleanse", quantity: 1 }]);
+    await page.goto("/checkout");
+    await bigEnough(page.getByRole("link", { name: /Keep shopping/ }), "keep shopping");
+  });
+});
+
+test.describe("The admin tables on a phone", () => {
+  test("an order in the list is a card with everything on screen", async ({ page, request }) => {
+    const order = await createPaidOrder(request, [{ skuId: "veil-spf", quantity: 1 }], "e2e.phone@example.com");
+    await signIn(page);
+    await page.goto("/admin/orders");
+
+    const row = page.getByRole("row").filter({ hasText: order.id });
+    await expect(row).toBeVisible();
+    const inViewport = async (name: string | RegExp) => {
+      const b = (await row.getByText(name).first().boundingBox())!;
+      return b.x >= 0 && b.x + b.width <= 376;
+    };
+    expect(await inViewport(order.id)).toBe(true);
+    expect(await inViewport("e2e.phone@example.com")).toBe(true);
+    expect(await inViewport(/Paid/)).toBe(true);
+    expect(await inViewport(/\$\d/)).toBe(true);
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+  });
+
+  test("inventory buttons are on screen, and still announced as a table", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/admin/inventory");
+
+    const row = page.getByRole("row").filter({ hasText: "Dawn Cleanse" });
+    for (const name of [/Adjust/, /History/]) {
+      const b = (await row.getByRole("button", { name }).boundingBox())!;
+      expect(b.x).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width).toBeLessThanOrEqual(376);
+      expect(b.height).toBeGreaterThanOrEqual(39.5);
+    }
+    // Restyling the rows must not take away what a screen reader knows about the table.
+    await expect(page.getByRole("table")).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "In stock" })).toHaveCount(1);
+
+    await row.getByRole("button", { name: /Adjust/ }).click();
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
+    await row.getByRole("button", { name: /History/ }).click();
+    await expect(page.getByRole("list", { name: "Stock history" })).toBeVisible();
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
   });
 });

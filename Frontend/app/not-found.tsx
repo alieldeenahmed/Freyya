@@ -27,7 +27,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/"
-            className="text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
+            className="inline-flex min-h-11 items-center text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
           >
             Back home
           </Link>

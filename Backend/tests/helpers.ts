@@ -99,3 +99,25 @@ export const validOrder = (overrides: Record<string, unknown> = {}) => ({
   items: [{ skuId: "dawn-cleanse", quantity: 1 }],
   ...overrides,
 });
+
+// The rule that must hold after any amount of concurrent activity: every item's stock is
+// never negative, and equals the sum of its recorded movements. An empty result means it holds.
+export async function ledgerProblems(db: Db): Promise<{ sku_id: string; stock: number; ledger: number }[]> {
+  const result = await db.execute(sql`
+    select s.id as sku_id, s.stock, coalesce(sum(m.delta), 0)::int as ledger
+    from skus s left join inventory_movements m on m.sku_id = s.id
+    group by s.id, s.stock
+    having s.stock < 0 or s.stock <> coalesce(sum(m.delta), 0)
+  `);
+  return result.rows as { sku_id: string; stock: number; ledger: number }[];
+}
+
+// Sets an item's stock and records why, so the ledger still adds up.
+export async function setStock(db: Db, skuId: string, stock: number): Promise<void> {
+  await db.execute(sql`
+    with old as (select stock from skus where id = ${skuId}),
+    upd as (update skus set stock = ${stock} where id = ${skuId} returning id)
+    insert into inventory_movements (sku_id, delta, stock_after, reason, note)
+    select ${skuId}, ${stock} - old.stock, ${stock}, 'adjustment', 'test setup' from old, upd
+  `);
+}

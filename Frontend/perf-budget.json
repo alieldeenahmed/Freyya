@@ -1,0 +1,23 @@
+{
+  "_comment": "Gzipped JavaScript a first visit downloads, per page. Baseline measured on 2026-09-20 (see docs/performance.md) plus about 8 percent. Raise a number only on purpose, and say why in the commit.",
+  "unit": "KB gzipped",
+  "totalJs": 267,
+  "routes": {
+    "/": 219,
+    "/about": 218,
+    "/admin": 218,
+    "/admin/inventory": 222,
+    "/admin/login": 219,
+    "/admin/orders": 218,
+    "/admin/orders/[id]": 220,
+    "/checkout": 224,
+    "/checkout/confirmation": 219,
+    "/contact": 219,
+    "/privacy": 218,
+    "/quiz": 219,
+    "/shipping-returns": 218,
+    "/shop": 220,
+    "/shop/[id]": 226,
+    "/terms": 218
+  }
+}

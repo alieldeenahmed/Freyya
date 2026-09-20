@@ -236,9 +236,11 @@ export default function ProductReviews({
                 <button
                   type="button"
                   onClick={() => setShowAll((v) => !v)}
-                  className="mt-8 border-b border-accent pb-0.5 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
+                  className="group mt-6 inline-flex min-h-11 items-center text-xs uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
                 >
-                  {showAll ? "Show fewer" : `Show all ${reviews.length} reviews`}
+                  <span className="border-b border-accent pb-0.5">
+                    {showAll ? "Show fewer" : `Show all ${reviews.length} reviews`}
+                  </span>
                 </button>
               )}
             </div>

@@ -25,9 +25,9 @@ It is a portfolio project, not a hosted business: nothing is really charged, nob
 
 **https://freyya.vercel.app/**
 
-The storefront is deployed on Vercel. **The API is not deployed**, so this deployment has no backend behind it (`/api/*` requests fail on the live site). In practice:
+The storefront is deployed on Vercel. **The API is not deployed**, so this deployment has no backend behind it (`/api/*` requests fail on the live site). The site knows this: it shows the bundled catalog, and its checkout page says plainly that this copy cannot place orders, instead of letting a visitor fill in the form and fail on the last click. In practice:
 
-- Browsing works: the shop, product pages, the Shade Match quiz, the bag, the About and policy pages. The catalog comes from the bundled copy in `Frontend/data/products.ts`.
+- Browsing works: the shop, product pages, the Shade Match quiz, the bag, the About and policy pages. The catalog comes from the generated snapshot in `Frontend/data/products.ts`.
 - Placing an order and signing in to `/admin` do not work there. To see them, run the project locally (see [Getting Started](#getting-started)). The admin screenshots below come from a local run.
 
 ## Screenshots
@@ -94,7 +94,7 @@ flowchart LR
   end
   API["Fastify API"]
   DB[("PostgreSQL")]
-  SNAP["data/products.ts<br/>bundled fallback catalog"]
+  SNAP["data/products.ts, data/shop-rules.ts<br/>generated snapshot"]
 
   SC -->|"GET /products"| API
   SC -.->|"API unreachable"| SNAP
@@ -107,7 +107,7 @@ flowchart LR
 ```
 
 - The **browser never calls the API directly**. Actions go to `/api/*` on the storefront's own address, and `next.config.ts` rewrites those requests to the API. That keeps the admin session cookie same-origin.
-- **Server components fetch the catalog** and hand it to the browser through a context provider. If the API cannot be reached, they fall back to the bundled catalog so the site still opens.
+- **Server components fetch the catalog** and hand it to the browser through a context provider. If the API does not answer within four seconds, they fall back to the generated snapshot so the site still opens, and the provider records that the catalog is not live.
 - **The bag, your reviews and the last order live in `localStorage`**, not on the server.
 - **Admin pages render on the server** and call the admin API with the visitor's session cookie. Without a session they redirect to the sign-in page and render no data.
 
@@ -131,6 +131,50 @@ sequenceDiagram
   B->>B: save the order, clear the bag, open the confirmation page
 ```
 
+## Data Ownership
+
+The shop's data lives in more than one place because the storefront has to keep working when the API cannot be reached, as it does on the public deployment. So the question is not how to have one copy. It is which copy is the truth, and what stops the others from drifting.
+
+| Data | Owner | Where it lives | Other copies | How they stay honest |
+| --- | --- | --- | --- | --- |
+| Products, prices, shades, launch stock | The API | `Backend/src/db/seed-data.ts`, then Postgres | `Frontend/data/products.ts` | **Generated** from the seed file by `npm run sync:data`. A test and CI fail if it is out of date or has been edited by hand |
+| Shipping methods and prices, the free-shipping threshold, the countries, the limit per item | The API | `Backend/src/domain/pricing.ts` | `Frontend/data/shop-rules.ts` | **Generated** the same way. `lib/shipping.ts` and `lib/cart-store.ts` import it, and a test fails if either writes a number of its own |
+| Live stock, orders, order status, the stock ledger | Postgres, through the API | The database | None. The browser keeps only the last order it placed, for the confirmation page | Nothing to keep in step |
+| The bag | The visitor's browser | `localStorage` | None | Checked against the catalog every time it is read |
+| Reviews | The visitor's browser | `localStorage`, on top of seeded reviews in `data/reviews.ts` | None | Not stored on a server. Said so in the interface and here |
+| The catalog the tests use | The storefront's tests | They run against the snapshot | | They pin numbers from it, such as 24 in stock, so changing launch stock in the API means updating the tests. That is a useful alarm, not a leak |
+
+The rules that follow from this:
+
+- **The browser never asks the API for anything directly.** Every call goes to `/api/*` on the storefront's own address, which Next rewrites to the API.
+- **The API is the only thing that decides a price or a total.** The storefront shows a preview with the same rules, so a shopper sees the cost before they commit, but the order it places carries only items and quantities. What the confirmation page shows is what the API answered.
+- **With no API, the storefront says so.** It shows the snapshot, and its checkout page states that this copy cannot place orders. It does not let a shopper fill in a form and fail on the last click without explanation.
+- **The packages can still be deployed alone.** The only coupling is the generation step, which happens while developing, not while running. Nothing in the storefront imports from the API at runtime.
+- **Changing the catalog is one command.** Edit `Backend/src/db/seed-data.ts` or `pricing.ts`, run `npm run sync:data`, and commit both. If the second step is forgotten, CI says exactly what to run.
+
+## Correctness Guarantees
+
+What the API promises, and the tests that would fail if it stopped. All of them run against a real Postgres database, since a mock cannot show a lock being taken.
+
+**Stock is never negative and never invented.** Placing an order locks the rows for its items in a fixed order, checks the stock, and takes it, in one transaction. A single function changes stock, and it writes a row to a ledger each time. The database also refuses a negative count. After every race below, the tests check the same rule: each item's stock equals the sum of its ledger, and is not below zero.
+
+- Ten buyers for three units: exactly three orders succeed.
+- Eight buyers and three admin adjustments on one item at the same time: the final stock equals the start, plus the adjustments that were accepted, minus the orders that were placed.
+- Twenty admin removals of one unit each from an item with ten: exactly ten are accepted and ten are refused.
+- Twelve orders, each then paid, cancelled or both at once: the books balance, and the stock held equals the orders still standing.
+
+**A retry is safe, and a mistaken retry is refused.** An order carries an `Idempotency-Key`. Ten identical requests arriving together make one order and take the stock once. A repeat after the order was paid returns it as paid, and after it was cancelled returns it as cancelled, taking nothing again. Using the same key for a *different* order is refused with `422 idempotency_key_reused`, because quietly returning the old order would tell a shopper their new cart had been ordered. The API compares a fingerprint of the buyer, address, shipping method and merged items.
+
+**Held stock is released once, and never blocks a buyer.** An unpaid order holds its stock for 15 minutes. A sweep gives it back, and placing an order also releases any hold that has run out before checking stock, so nobody is turned away because the sweep has not come round yet. A payment and the sweep arriving together release the stock once, and two sweeps together do the same.
+
+**Order status follows one table.** Every pair of statuses (36 of them) is checked through the real API. Only cancelling returns stock. A refund does not, because shipped goods may not be resellable. Ten cancellations at once cancel once. Shipping and cancelling together let exactly one win, and the stock agrees with the winner. No route lets a customer change a status, and a status or a timestamp in a request body is ignored.
+
+**Bad input is refused, not trusted.** Quantities of 0, -1, 1.5, "2", null, true, 11 and a billion are all refused, as are 21 lines, an item split across lines to get round the limit of ten, a text field with a NUL character (which Postgres cannot store and which used to cause a 500), an id that could not exist, and a request body of two megabytes. Prices, totals and statuses sent by the client are ignored.
+
+**The admin is protected everywhere.** A test walks every route the API has registered and checks that each is either on a short list of open routes or answers `401` before it reads anything else. Adding a route without choosing which list it belongs on fails the test. See the API's own README for the cookie, rate-limit and cache details.
+
+**Not guaranteed.** Everything rests on one Postgres database. Hold expiry uses the API server's clock, so several servers with different clocks are not accounted for. Payment is simulated, so there is no real double-charge case to test.
+
 ## Frontend Architecture
 
 - **Framework.** Next.js 16.3 with the App Router and React 19. Turbopack is the default toolchain in this version. There is no Vite.
@@ -140,7 +184,7 @@ sequenceDiagram
   - *Catalog:* fetched on the server, exposed through `CatalogProvider` and `useCatalog()`.
   - *Persistent browser state:* the bag (`freyya:cart`), your reviews (`freyya:reviews`) and the last order (`freyya:last-order`), each a small module read with `useSyncExternalStore`. Each returns the same cached value until the stored value changes, so React sees a stable snapshot. They sync across tabs through the `storage` event and fall back to memory if storage is blocked.
   - *Local UI state:* ordinary `useState` for forms, the quiz, drawers and menus.
-- **Data handling.** `lib/catalog.ts` fetches and validates the catalog. `lib/api.ts` is a small typed client that turns API failures into an `ApiError`. `lib/checkout.ts` builds order requests and turns each kind of failure into a message and a fix.
+- **Data handling.** `lib/catalog.ts` fetches and validates the catalog. `lib/api.ts` is a small typed client. It gives every request a timeout, and turns every way a call can fail into one `ApiError` with a stable code: the API's own codes, or `network_error`, `timeout` or `unavailable` (for the plain error page a proxy returns when the API is down). `lib/checkout.ts` turns each of those into a message and a fix, and never trusts the shape of an error it is given, because it runs in the error path.
 - **Reusable pieces.** `Reveal` (scroll-triggered fade-in), `FadeImage`, `Field` and `fieldClass` (form inputs), `Select` (dropdown), `PolicyPage`, `ProductCard`, `ProductGrid`, `OrderSummary`, `StatusBadge`, and hooks such as `useMagnetic` and `useHydrated`.
 - **Quality tooling.** Strict TypeScript, ESLint with `eslint-config-next`, Vitest with Testing Library, Playwright with axe, and CI on GitHub Actions.
 
@@ -201,17 +245,25 @@ The layout is mobile-first and uses two Tailwind breakpoints: `sm` (640px) and `
 
 | Width | What changes |
 | --- | --- |
-| Below 640px | Single column. The header shows a menu button that opens a nav panel. The product grid is one column, and the product page stacks photo above text. The bag drawer is full width, up to a maximum of 384px. |
+| Below 640px | Single column. The header shows a menu button that opens a nav panel. The product grid is one column, and the product page stacks photo above text. The bag drawer is full width, up to a maximum of 384px. The admin's tables become cards. |
 | 640px and up | The header becomes a three-column grid with inline navigation. The shop grid is two columns, the product page is two columns with the photo sticky beside the text, and forms use two-column rows. |
 | 1024px and up | The shop grid is three columns. Checkout adds a 400px order-summary column that stays in view, and the order confirmation adds a 400px summary column. |
+
+**What the audit measured.** Every storefront page and the admin were loaded at 320, 375, 768, 1024, 1440 and 1920 pixels, checking for anything that scrolls the page sideways, anything poking past the edge, and every control smaller than 40 pixels. Screenshots of the header, shop, product, checkout, quiz, menu and bag were read at each size. Nothing overflowed at any width, so no breakpoint was added: the two that exist held up, and a tablet layout would have been a cost without a problem to solve. The audit did find, and the changes fixed:
+
+- **The admin inventory hid its buttons on a phone.** The table was 36rem wide inside a scroller, so at 375px the Adjust and History buttons sat off-screen with nothing to say the table scrolled. The inventory and orders tables now become cards below 640px, with the table roles written out so a screen reader still hears a table. The stock history rows wrap too.
+- **Undersized tap targets.** The newsletter button (35 pixels wide), the tablet navigation (32 tall), the rating, "Back to shop", "Keep shopping", "Cancel", "Show all reviews", "Got it", "View bag" (16 to 20 tall) and the star radios (36) are now at least 40 pixels, without changing how the page looks: the underlines stay under the text.
+- **Five stars and their label could not fit a 320 pixel screen** once the stars were made bigger, so they wrap.
 
 Other techniques used:
 
 - The hero uses `dvh` units, so it fits mobile browser chrome.
 - `next/image` `sizes` attributes match the layout's real column widths.
 - Icon buttons are 44 by 44 pixels.
-- Wide admin tables scroll inside their own container instead of widening the page. This was verified at 375px.
 - The header is sticky, and the mobile nav panel is animated with GSAP.
+- At 1920 pixels the content stays in a centred column of a readable width instead of stretching. That is a design choice, and it leaves wide margins on the largest screens.
+
+These checks are permanent tests in `Frontend/e2e/responsive.spec.ts`.
 
 ## Accessibility
 
@@ -231,6 +283,8 @@ Built for screen readers and keyboards, and checked with automated tests of the 
 - Product cards are named once, by their heading. Their photographs are decorative.
 - Images otherwise have descriptive `alt` text, or an empty one when purely decorative.
 - **Reduced motion** is respected across GSAP (`prefersReducedMotion()`), CSS (`prefers-reduced-motion` and `motion-reduce:`), and smooth scrolling, which is not started at all.
+- **Focus is easy to find.** The keyboard focus ring is 2 pixels of the deep gold, about 5:1 against the cream. It used to be 1 pixel of the brand gold, about 2:1, which is below the 3:1 that WCAG asks of focus indicators. Fields show focus as a thicker underline in the same colour.
+- **Controls are tap-sized.** Everything a shopper presses on a phone is at least 40 pixels each way, checked in the tests.
 - Text tones were checked against WCAG AA contrast ratios during development, which is why a separate deeper gold exists for small text. This was a calculation, not a formal audit.
 
 **Automated checks.** Three kinds, all run in CI:
@@ -250,42 +304,69 @@ These read the information a screen reader is built from. They cannot tell wheth
 - **Layout stability.** The Suspense fallback on the shop renders the same markup as the real controls, the checkout pages reserve their height, and the hero text animates from CSS from the first paint.
 - **Animation hygiene.** GSAP work is wrapped in `gsap.context()` and reverted on cleanup. Lenis is kept in sync with the page height through a `ResizeObserver`.
 
-Lighthouse was run locally during development and its results are recorded in [`Frontend/README.md`](Frontend/README.md). There is no automated performance budget and no bundle analysis in the repository.
+**Measured, with a budget.** A first visit downloads about 202 KB of gzipped JavaScript on the home page and 209 KB on a product page, of which 128 KB is React and the Next.js router. The rest is mostly GSAP with ScrollTrigger, which loads on every page. `npm run perf` reads the production build and fails CI if a page grows past its budget in `Frontend/perf-budget.json`. [`docs/performance.md`](docs/performance.md) has the baseline, where the bytes are, and what was found and deliberately left alone.
+
+Lighthouse was run locally during development and its results are recorded in [`Frontend/README.md`](Frontend/README.md). There is no Lighthouse run in CI, and no measurement of real visitors.
 
 ## Testing
 
-There are three layers, and CI runs all of them.
-
-**Storefront: 184 tests in 15 files** (Vitest, in `Frontend/tests`). Logic tests run in Node. Component tests render the real components in jsdom with Testing Library, with the network mocked.
-
-| Area | What is checked |
-| --- | --- |
-| Shade Match | All eight shade outcomes, ties, fallbacks, defaults, and every one of the 108 answer combinations. The quiz component is tested from the first question to the result. |
-| Bag | Stock limits per shade, persistence across a reload, and recovery from a tampered, outdated or corrupted saved bag. The drawer is tested as a modal: focus trap, Escape, inert background, quantities. |
-| Checkout | Request building, and each kind of server error mapped to a message and a fix. The form is tested end to end against a mocked API: request contents, validation, stock refusals that correct the bag, field errors, and idempotency keys that are reused after a dropped connection and reset after a change. |
-| Shop, product page, reviews | Filtering, sorting and the URL. Shade swatches and stock lines, star rating and review validation, the accordion, and the custom dropdown's keyboard behaviour. |
-| Catalog, reviews, totals | Data integrity, average and distribution, and the free-shipping threshold. |
-
-**API: 88 tests in 6 files**, run against a real Postgres database, including ten buyers racing for three units (exactly three orders succeed), idempotent retries, reservation expiry, admin sign-in and sessions, order status rules, and stock adjustments. The API tests wipe their tables, so they run on a separate database, and they refuse to run if it matches `DATABASE_URL`. See [`Backend/README.md`](Backend/README.md#tests).
-
-Four of them are **contract tests**. The storefront and the API each keep their own copy of the shipping rules and the catalog, so that either can be deployed alone. These tests read the storefront's files and fail as soon as the two copies stop agreeing.
-
-**End to end: 71 tests in 6 files** (Playwright), against a production build of the storefront, the real API and a throwaway database, on desktop Chrome and a 375 pixel phone:
-
-- Browsing, filtering, the bag and Shade Match.
-- A real purchase, checked against the API afterwards, and a refused order.
-- The admin: signing in, shipping an order, cancelling one and seeing its stock return, restocking, and refusing negative stock.
-- Layout on a phone: no sideways scrolling on any page, the menu, the drawer and the stacked layouts.
-- The automated accessibility scans, and tests of names, focus and announcements in the accessibility tree, both described above.
+Three layers, and CI runs all of them. **Storefront: 243 tests in 18 files. API: 249 tests in 9 files. End to end: 111 tests in 8 files.**
 
 ```bash
 npm test                # storefront and API tests
 npm run test:e2e        # end-to-end tests (needs Backend/.env.test)
 ```
 
-**Continuous integration.** `.github/workflows/ci.yml` runs on every push to `main` and every pull request. It checks the storefront (lint, type-check, tests, build) and the API (type-check, build, migrations on an empty Postgres, tests), then runs the end-to-end suite. The workflow was validated and its first two jobs were reproduced from a clean checkout, but the end-to-end job has not yet run on GitHub's own runners. There is no automatic deployment.
+### Storefront (Vitest, `Frontend/tests`)
 
-Not covered: a manual screen-reader pass, and real-device testing beyond the emulated phone.
+Logic tests run in Node. Component tests render the real components in jsdom with Testing Library and a mocked network.
+
+| Area | What is checked |
+| --- | --- |
+| Shade Match | All eight shade outcomes, ties, fallbacks, defaults, and every one of the 108 answer combinations. The quiz component is tested from the first question to the result. |
+| The bag | Stock limits per shade, the limit of ten per order, persistence across a reload, and recovery from a saved bag that is tampered with, from an older version, has duplicate lines, has ids that no longer match, or has quantities such as 0, -3, 0.2 and a billion. Merged duplicates, sold-out items and cut-back quantities are explained to the shopper in words. The drawer is tested as a modal: focus trap, Escape, inert background, announcements. |
+| Checkout | Request building. The form end to end against a mocked API. Every failure a shopper can meet: the store unreachable, timing out, answering with an HTML error page, rate limiting, a stock refusal, an order closed before payment, a request key reused, and details that are malformed. Each is shown as a plain message, leaves the bag alone, and lets the shopper retry. Retries reuse the same request key, and changing anything starts a new one. |
+| The API client | Timeouts, dropped connections, an HTML page where JSON was expected, a success that is not JSON, and the API's own error codes passed through. |
+| Shop, product page, reviews | Filtering, sorting and the URL. Shade swatches, stock lines and the limit message. Star rating and review validation. The accordion and the custom dropdown's keyboard behaviour. |
+| Screen readers | Names, landmarks, announcements and where focus lands after each action, across the header, bag, quiz, reviews and forms. |
+
+### API (Vitest, `Backend/tests`, real Postgres)
+
+| File | What is checked |
+| --- | --- |
+| `orders`, `catalog`, `pricing`, `auth`, `admin` | Ordering, pricing, stock, expiry, sign-in, sessions, order transitions and stock adjustments, one path at a time |
+| `concurrency` | The races: buyers against buyers, buyers against admin adjustments, orders against the expiry sweep, payments against cancellations, ten identical requests at once, the same key with a different order, and dozens of kinds of malformed input. After each, the stock ledger must still balance |
+| `order-state-machine` | All 36 status pairs through the API, the side effects on stock, and every way a customer might try to change a status |
+| `security` | Every route is open or protected on purpose. Cookie flags. Origin checks. Sign-in limits. No data in refusals. `no-store` on personal data. Hostile ids and NUL characters. Nothing from the environment in any response |
+| `contract` | The storefront's generated snapshot matches the API's files exactly, and the storefront's code writes no rule of its own |
+
+The API tests wipe their tables, so they run on a separate database and refuse to run if it matches `DATABASE_URL`. See [`Backend/README.md`](Backend/README.md#tests).
+
+### End to end (Playwright, `Frontend/e2e`)
+
+Against a production build of the storefront, the real API and a throwaway database, on desktop Chrome and a 375 pixel phone. Each spec is a journey a person would take:
+
+| Spec | Journey |
+| --- | --- |
+| `journeys` | **A.** Home, shop, product, shade, bag, reload, checkout, confirmation, with the stock checked in the database afterwards. **B.** Stock that runs out: the button and drawer stop at the stock, and at ten of an item however much is in stock. A bag from an earlier visit is cut back with an explanation. Someone else buys the last units while the shopper is typing, and the shopper is told and gets the last one. **C.** The store fails during checkout, four ways: unreachable, a gateway error page, rate limited, and the payment step dropping after the order was made. Each is explained, the bag is kept, and the retry reuses the same request key and makes one order. **D.** The admin's session ends mid-task and they are sent to sign in, with nothing changed |
+| `checkout`, `storefront` | A real purchase, a refused order, validation, the shop, the quiz and the bag |
+| `admin` | Signing in, shipping an order, cancelling one and seeing its stock return, restocking, refusing negative stock |
+| `responsive` | No sideways scrolling on any page at 320, 375, 768, 1024 and 1920 pixels. Tap-sized controls on a phone. The admin tables as cards |
+| `accessibility` | axe scans of every page and the main interactive states |
+| `screen-reader` | Names, states and focus in the browser's accessibility tree |
+| `seo` | Titles, canonical addresses, share previews, robots.txt, the sitemap, structured data, real 404s, and every internal link on every page |
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request:
+
+- **Storefront:** lint, type-check, tests, a production build with fake values in the server-only settings, a scan proving none of them reached a file a browser downloads, and the performance budget.
+- **API:** type-check, build, a check that the storefront's snapshot is up to date, migrations on an empty Postgres, and the tests.
+- **End to end:** after the two above pass, the whole Playwright suite. The report is kept if it fails.
+
+The first run on GitHub failed for a real reason that only showed up there: the lockfile had been written by a newer npm than the one on GitHub's runners, which wanted two packages it did not list. Once that was fixed, all three jobs passed on GitHub's Linux runners, including the end-to-end suite in the browser Playwright installs. The checks added since then have been run locally and have not yet been run by GitHub. There is no automatic deployment: Vercel deploys the storefront through its own free integration.
+
+Not covered: a manual screen-reader pass, real-device testing beyond the emulated phone, and load testing.
 
 ## Project Structure
 
@@ -297,9 +378,10 @@ Freyya/
 │   ├── components/          UI components
 │   │   └── admin/           Admin UI
 │   ├── lib/                 Catalog, bag, checkout, quiz, shop view, API client
-│   ├── data/                Bundled catalog (fallback and test fixture), seeded reviews
+│   ├── data/                Generated snapshot of the API's catalog and shop rules, seeded reviews
 │   ├── tests/               Logic and component tests (Vitest)
-│   ├── e2e/                 End-to-end and accessibility tests (Playwright)
+│   ├── e2e/                 End-to-end, accessibility, SEO and layout tests (Playwright)
+│   ├── scripts/             Bundle size report and the client-bundle secret scan
 │   ├── public/              Product and hero photography
 │   ├── assets/fonts/        Fonts used to draw share images and icons
 │   └── docs/screenshots/    Storefront screenshots
@@ -307,9 +389,9 @@ Freyya/
 │   ├── src/                 Routes, services, domain rules, database
 │   ├── drizzle/             Generated SQL migrations
 │   ├── tests/               Integration and unit tests
-│   └── scripts/             Admin password helper
+│   └── scripts/             Admin password helper, and the generator for the storefront's snapshot
 ├── .github/workflows/       CI
-├── docs/                    Admin screenshots, accessibility checklist
+├── docs/                    Admin screenshots, accessibility checklist, performance baseline
 └── package.json             Root scripts that drive both packages
 ```
 
@@ -337,14 +419,14 @@ The storefront's only runtime dependencies are `next`, `react`, `react-dom`, `gs
 
 | Decision | Why it appears to have been made | Trade-off |
 | --- | --- | --- |
-| Catalog comes from the API, with a bundled fallback | A code comment says the site should stay browsable if the API is down. | The bundled copy can be out of date, and the same catalog also exists as backend seed data. |
+| Catalog comes from the API, with a generated snapshot as fallback | The site should stay browsable if the API is down, as it is on the public deployment. | The snapshot can show stock that is out of date. It is generated from the API's own files and CI fails if it is stale, and its checkout page says when orders cannot be placed. |
 | Bag re-checked against the catalog on every read | A comment says a saved bag must never carry an outdated price, image or stock level. | The catalog has to be available in the browser, which is why it goes through a context provider. |
 | Browser calls `/api/*` and Next rewrites it to the API | A comment in `next.config.ts` says this keeps the admin cookie same-origin. | The storefront host needs the API address at build time. |
 | Local stores read through `useSyncExternalStore` with cached snapshots | The code keeps the same value until the stored one changes, which is what `useSyncExternalStore` needs for a stable snapshot, and it adds cross-tab sync through the `storage` event. The comments give no further reason. | A small amount of hand-written store code, repeated for three stores. |
 | Shop-to-product transition uses a "ghost" copy and `Flip.fit` | A comment says a fixed copy means the grid never reflows and the text column stays put. | It is bespoke code that has to handle slow image loads and reduced motion. |
 | Custom `Select` instead of the browser's | Branded, consistent dropdowns (commit: "replace native dropdowns with a branded select"). | Browser autofill no longer fills the country field, and keyboard and screen-reader behaviour is now code to maintain. |
 | Simulated payment behind a `PaymentProvider` interface | A comment marks it as the seam for a real provider. | The most visible part of a real checkout is faked. |
-| The API sets prices, and the browser sends only items and quantities | Tests and comments assert that client prices are ignored. | The shipping rules and the catalog exist in both packages. A contract test fails if they differ, but they are still two copies. |
+| The API sets prices, and the browser sends only items and quantities | Tests and comments assert that client prices are ignored. | Prices and totals shown before ordering are a preview, using rules generated from the API's. |
 | Showcase sections use CSS `sticky` plus a scrubbed timeline | The git history shows an earlier version used a GSAP pin, replaced during a "responsive and performance pass". The commits do not record why. | The section height is set from JavaScript. |
 
 ## Challenges & Solutions
@@ -358,6 +440,12 @@ The storefront's only runtime dependencies are `next`, `react`, `react-dom`, `gs
 - **A modal that really is modal.** The drawer makes the rest of the page `inert`, traps focus, stops smooth scrolling, and restores all of it on close.
 - **Layout shift from a client-only filter.** The shop's Suspense fallback renders the same controls as the real component.
 - **A 404 page that answered 200.** The end-to-end tests found that an unknown product address showed the not-found design but returned HTTP 200, a "soft 404" for search engines. Once a response has started streaming its status cannot change. The fix is `dynamicParams = false` on the product route, so an unknown id is a real 404. The trade-off is that a product added after the last build has no page until the storefront is rebuilt. A test guards the 404.
+- **A retry that returned the wrong order.** The API answered a repeated idempotency key with the order it had first made, even when the new request was for a different cart. A client bug would have shown a shopper a confirmation for something they had not ordered. The API now remembers a fingerprint of each keyed order and refuses a mismatch with a clear code, with a test for the race where two different carts arrive with one key.
+- **Stock held by an order nobody paid for.** An expired hold still counted as taken until a sweep, once a minute, gave it back, so a buyer could be told an item was sold out that was not. Placing an order now releases expired holds first.
+- **The storefront and the API disagreed about how many you can buy.** The API takes at most 10 of an item, but the bag allowed as many as were in stock, so a shopper with 24 in their bag got "Please check the highlighted fields" with no field highlighted. The limit is now one number, generated from the API, that the bag enforces and explains.
+- **A NUL character was a 500.** `/products/%00` and a name containing a NUL both reached Postgres, which cannot store one. Ids and text are now checked before the database, and a test tries hostile values on every route.
+- **A bag that shrinks in silence.** Items that sold out or were withdrawn used to vanish from the bag with no explanation. It now says what changed and why, and a saved bag with duplicate lines, old-style ids or absurd quantities is repaired rather than trusted.
+- **A focus ring nobody could see.** The keyboard focus outline was the brand gold on cream, about 2:1. It is now the deep gold, about 5:1.
 - **The add-to-bag feedback took three tries.** The history shows a fly-to-bag animation, then a gold-dust glide, then the current gold wipe with a rolling count and a note. The commits do not record the reasoning.
 
 ## Getting Started
@@ -371,7 +459,7 @@ cd Freyya
 
 ### Storefront only
 
-No database is needed. The catalog comes from the bundled copy, and a warning about that appears in the terminal. Ordering and the admin will not work.
+No database is needed. The catalog comes from the generated snapshot, and a warning about that appears in the terminal. Ordering and the admin will not work, and the checkout page says so.
 
 ```bash
 cd Frontend
@@ -396,7 +484,7 @@ npm run admin:hash -- "a password of at least 12 characters"
 Create the tables, load the six products, and start both servers in two terminals:
 
 ```bash
-npm run db:migrate
+npm run db:migrate     # run this again after pulling changes: migrations are additive
 npm run db:seed
 npm run dev:api        # API on http://localhost:4000
 npm run dev:web        # storefront on http://localhost:3000
@@ -412,11 +500,15 @@ The admin is at [http://localhost:3000/admin](http://localhost:3000/admin).
 | `npm run dev:api`, `npm run dev:web` | Start the API, or the storefront |
 | `npm run db:migrate`, `npm run db:seed` | Create tables, load the launch catalog (safe to repeat) |
 | `npm run admin:hash` | Make a password hash for the admin login |
+| `npm run sync:data` | Regenerate the storefront's snapshot of the catalog and shop rules from the API's files |
+| `npm run sync:data:check` | Fail if that snapshot is out of date |
 | `npm run typecheck` | Type-check both packages |
 | `npm run lint` | Lint the storefront |
 | `npm test` | Run the storefront and API tests (the API tests need `Backend/.env.test`) |
 | `npm run test:e2e` | Run the end-to-end tests (needs `Backend/.env.test`) |
 | `npm run build` | Build both packages |
+| `npm --prefix Frontend run perf` | After a build: page weights against the budget |
+| `npm --prefix Frontend run check:bundle` | After a build: check no server-only value reached the browser bundle |
 
 To preview a production build of the storefront: `npm --prefix Frontend run build`, then `npm --prefix Frontend start`.
 
@@ -448,9 +540,20 @@ To preview a production build of the storefront: `npm --prefix Frontend run buil
 
 ## Deployment
 
-- **Storefront.** Deployed on Vercel at https://freyya.vercel.app/. The repository holds no platform configuration file. [`Frontend/README.md`](Frontend/README.md) documents the setup: Root Directory `Frontend`, with `API_URL` set to the API's address at build time.
-- **API.** Not deployed, which is why the live storefront has no backend. It is a plain Node service: build it with `npm run build`, run the migrations against the target database, then start it with `npm start`, with the environment variables above. Set `CORS_ORIGINS` to the storefront's address and `TRUST_PROXY=true` behind a proxy. See [`Backend/README.md`](Backend/README.md).
-- CI runs on GitHub Actions (see [Testing](#testing)). There is no automatic deployment.
+**Storefront, on Vercel.** Deployed at https://freyya.vercel.app/. The repository holds no platform configuration file. Import the repository, set the Root Directory to `Frontend`, and Vercel builds it. Nothing else is needed, because the storefront builds and runs with no API:
+
+- **No API address set.** `API_URL` defaults to `http://localhost:4000`, which does not exist on Vercel. The catalog request fails at once, the build logs a line saying it is using the snapshot, and every page is generated from it. The build takes about a minute and prints `[catalog] using the bundled snapshot` many times. That is expected.
+- **If the API address is set but does not answer,** the same happens after four seconds, so a dead host cannot hang a build or a page.
+- **Setting `API_URL`** to a reachable API makes the pages use live data, refreshed every 30 seconds. It is read when the site builds, because it is baked into the `/api/*` rewrite, so change it and redeploy.
+- **Setting `NEXT_PUBLIC_SITE_URL`** gives the sitemap, canonical addresses and share previews a custom domain. Without it they use Vercel's production address.
+- **Server-only values never reach the browser.** Only `NEXT_PUBLIC_*` values are ever placed in browser files. CI builds with fake values for `API_URL`, `DATABASE_URL`, `ADMIN_EMAIL` and `ADMIN_PASSWORD_HASH`, then searches every file the browser downloads for them, and for the shape of a connection string, a password hash and a private key. It also fails if a planted leak is present, which was checked by planting one.
+- **Routes.** Every internal link on every page in the sitemap is followed in the end-to-end tests, and an unknown address, or a product that did not exist at build time, is a real 404. That means a product added to the API after a build has no page until the storefront is rebuilt.
+
+**Running with the local API.** For the full demonstration, run the API and the storefront on a machine, as in [Getting Started](#getting-started). The storefront needs `API_URL` (default `http://localhost:4000`), and the API needs `CORS_ORIGINS` set to the storefront's address. Nothing about the local setup requires paid hosting: the database can be a free Neon project.
+
+**API.** Not deployed, which is why the live storefront has no backend. It is a plain Node service: build it with `npm run build`, run the migrations against the target database, then start it with `npm start`, with the environment variables above. Set `CORS_ORIGINS` to the storefront's address and `TRUST_PROXY=true` behind a proxy. See [`Backend/README.md`](Backend/README.md).
+
+**CI** runs on GitHub Actions (see [Testing](#testing)). There is no automatic deployment.
 
 ## Current Status
 
@@ -462,11 +565,16 @@ A polished portfolio project with a working backend, not a hosted business.
 - One admin, set in the API's environment. There are no customer accounts.
 - The live deployment has the storefront only. The API and admin need a local run.
 
-Limitations found during the audit:
+Limitations found during the audit, and what was done about them:
 
-- The bundled catalog, the API's seed data and the shipping rules exist in more than one place. Contract tests catch drift, but they are still copies.
-- Only two responsive breakpoints. There is no dedicated tablet layout.
-- No manual screen-reader pass has been done, and real-device testing goes no further than an emulated phone.
+- **The catalog and shop rules live in the API and are copied to the storefront.** The copy is generated and CI fails if it is stale, so it cannot drift silently, but it is still a second copy, and a change means running one command and committing two files.
+- **Reviews are not on a server.** They are saved in the visitor's browser.
+- **The live site has no backend.** Ordering and the admin can be seen only in a local run, or in the screenshots and end-to-end tests.
+- **The admin pages download the storefront's animation code** (about 200 KB) because they share the root layout. Route groups would give the admin its own layout, at the cost of restructuring the routes.
+- **The API's password hashing uses scrypt at Node's default cost.** That is enough for one admin behind a rate limit. A public deployment should raise it.
+- **Stock hold expiry uses the API server's clock.** Several API servers with different clocks are not accounted for.
+- **No manual screen-reader pass has been done,** and real-device testing goes no further than an emulated phone.
+- **The checks added in the most recent changes have not yet run on GitHub.** They pass locally, and the run before them passed on GitHub.
 - The hero can play a background video, but none is supplied.
 
 ## Why This Project

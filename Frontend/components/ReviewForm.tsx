@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { fieldClass, labelClass } from "@/components/Field";
 import Select from "@/components/Select";
 import { Star } from "@/components/StarRating";
 import type { Review } from "@/lib/types";
@@ -9,9 +10,6 @@ const LIMITS = { titleMin: 3, titleMax: 60, bodyMin: 20, bodyMax: 600, nameMin: 
 
 type Errors = Partial<Record<"rating" | "title" | "body" | "name", string>>;
 
-const fieldClass =
-  "w-full border-0 border-b border-secondary/60 bg-transparent py-3 text-text placeholder:text-text/65 transition-colors focus:border-accent focus:outline-none";
-const labelClass = "text-[11px] uppercase tracking-[0.2em] text-text/65";
 
 function StarInput({
   value,
@@ -51,7 +49,7 @@ function StarInput({
       role="radiogroup"
       aria-label="Your rating"
       aria-describedby={describedBy}
-      className="-ml-1 flex items-center"
+      className="-ml-1.5 flex flex-wrap items-center"
       onMouseLeave={() => setHover(0)}
       onKeyDown={handleKey}
     >
@@ -68,7 +66,7 @@ function StarInput({
           tabIndex={value ? (value === n ? 0 : -1) : n === 1 ? 0 : -1}
           onMouseEnter={() => setHover(n)}
           onClick={() => onChange(n)}
-          className="p-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+          className="p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-deep"
         >
           <Star
             className={`h-7 w-7 transition-colors duration-200 ${
@@ -256,7 +254,7 @@ export default function ReviewForm({
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
+          className="inline-flex min-h-11 items-center px-2 text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
         >
           Cancel
         </button>

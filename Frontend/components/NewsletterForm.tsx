@@ -46,7 +46,7 @@ export default function NewsletterForm() {
       </label>
       <p className="mt-2 text-sm text-text/70">New shades and restocks. Rarely more.</p>
 
-      <div className="mt-4 flex items-end gap-4 border-b border-secondary/60 transition-colors focus-within:border-accent">
+      <div className="mt-4 flex items-end gap-4 border-b border-secondary/60 transition-colors focus-within:border-accent-deep focus-within:shadow-[0_1px_0_0_var(--color-accent-deep)]">
         <input
           id="newsletter-email"
           type="email"
@@ -63,7 +63,7 @@ export default function NewsletterForm() {
         />
         <button
           type="submit"
-          className="shrink-0 py-3 text-xs uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
+          className="min-w-11 shrink-0 py-3 pl-3 text-right text-xs uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
         >
           Join
         </button>

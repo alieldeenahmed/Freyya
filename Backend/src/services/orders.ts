@@ -2,6 +2,7 @@ import { and, eq, inArray, lt } from "drizzle-orm";
 import type { Config } from "../config.js";
 import type { Db, Tx } from "../db/client.js";
 import { orderItems, orders, products, skus, type ShippingId } from "../db/schema.js";
+import { fingerprintOrder } from "../domain/idempotency.js";
 import { generateOrderId } from "../domain/order-id.js";
 import { computeTotals } from "../domain/pricing.js";
 import { HttpError, notFound } from "../errors.js";
@@ -47,13 +48,25 @@ export async function loadOrder(executor: Executor, id: string): Promise<OrderVi
   return toOrderView(order, items);
 }
 
-async function loadByIdempotencyKey(db: Db, key: string): Promise<OrderView | null> {
+// The order a key was first used for, if any. A key that was used for a different order
+// is a client bug, and quietly returning the old order would hide it, so it is refused.
+async function replayFor(db: Db, key: string, fingerprint: string): Promise<OrderView | null> {
   const [row] = await db
-    .select({ id: orders.id })
+    .select({ id: orders.id, fingerprint: orders.idempotencyFingerprint })
     .from(orders)
     .where(eq(orders.idempotencyKey, key))
     .limit(1);
-  return row ? loadOrder(db, row.id) : null;
+  if (!row) return null;
+
+  // Orders made before fingerprints existed have none, and are replayed as before.
+  if (row.fingerprint !== null && row.fingerprint !== fingerprint) {
+    throw new HttpError(
+      422,
+      "idempotency_key_reused",
+      "That request key was already used for a different order."
+    );
+  }
+  return loadOrder(db, row.id);
 }
 
 export async function createOrder(
@@ -62,14 +75,23 @@ export async function createOrder(
   input: OrderInput,
   idempotencyKey?: string
 ): Promise<{ order: OrderView; created: boolean }> {
+  const fingerprint = fingerprintOrder(input);
+
   if (idempotencyKey) {
-    const existing = await loadByIdempotencyKey(db, idempotencyKey);
+    const existing = await replayFor(db, idempotencyKey, fingerprint);
     if (existing) return { order: existing, created: false };
   }
 
+  // Stock held for an unpaid order that has run out of time still counts as taken until the
+  // periodic sweep gets to it. Free it now, so a buyer is never turned away because of it.
+  // Best effort: if it fails, the stock check below is still correct, just less generous.
+  await expireReservations(db).catch(() => 0);
+
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      const id = await db.transaction((tx) => placeOrder(tx, config, input, idempotencyKey));
+      const id = await db.transaction((tx) =>
+        placeOrder(tx, config, input, idempotencyKey, fingerprint)
+      );
       const order = await loadOrder(db, id);
       if (!order) throw new Error("Order vanished after creation");
       return { order, created: true };
@@ -79,7 +101,7 @@ export async function createOrder(
 
       // Two identical requests raced: hand back the one that won.
       if (idempotencyKey && constraint?.includes("idempotency_key")) {
-        const existing = await loadByIdempotencyKey(db, idempotencyKey);
+        const existing = await replayFor(db, idempotencyKey, fingerprint);
         if (existing) return { order: existing, created: false };
       }
       // Otherwise the random order number collided; try another.
@@ -93,7 +115,8 @@ async function placeOrder(
   tx: Tx,
   config: Config,
   input: OrderInput,
-  idempotencyKey: string | undefined
+  idempotencyKey: string | undefined,
+  fingerprint: string
 ): Promise<string> {
   // The same item twice becomes one line.
   const quantities = new Map<string, number>();
@@ -150,6 +173,7 @@ async function placeOrder(
   await tx.insert(orders).values({
     id: orderId,
     idempotencyKey: idempotencyKey ?? null,
+    idempotencyFingerprint: idempotencyKey ? fingerprint : null,
     email: input.email,
     name: input.name,
     addressLine1: input.address.line1,

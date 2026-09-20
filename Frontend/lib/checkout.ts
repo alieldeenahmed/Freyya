@@ -1,4 +1,5 @@
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, NETWORK_ERROR, TIMEOUT, UNAVAILABLE, apiFetch } from "@/lib/api";
+import { MAX_PER_ITEM } from "@/lib/cart-store";
 import type { CartItem } from "@/lib/cart-store";
 import type { Order } from "@/lib/orders";
 import type { ShippingId } from "@/lib/shipping";
@@ -77,6 +78,8 @@ export interface CheckoutProblem {
   stockLimits: Record<string, number>;
   // True when sending the very same request again is the right thing to do.
   retryable: boolean;
+  // True when the bag itself is what is wrong, so it should be checked against the store again.
+  refreshBag: boolean;
 }
 
 const FIELD_FOR_PATH: Record<string, { key: FieldKey; message: string }> = {
@@ -103,21 +106,63 @@ export function describeCheckoutError(
     fieldErrors: {},
     stockLimits: {},
     retryable: true,
+    refreshBag: false,
   };
 
   if (!(error instanceof ApiError)) return problem;
 
-  if (error.code === "network_error") {
+  if (error.code === NETWORK_ERROR) {
     return { ...problem, message: error.message };
   }
 
+  // The order may or may not have reached the store. Trying again with the same request key
+  // is safe either way: the store gives back the order it already made instead of a second one.
+  if (error.code === TIMEOUT) {
+    return {
+      ...problem,
+      message: "The store took too long to answer. Your bag is safe. Try again, and you will not be charged twice.",
+    };
+  }
+
+  if (error.code === UNAVAILABLE) {
+    return { ...problem, message: "The store is not answering right now. Your bag is safe. Please try again in a moment." };
+  }
+
   if (error.code === "validation_error") {
-    const details = (error.details ?? []) as { path: string }[];
-    for (const { path } of details) {
+    // Whatever arrives is not trusted to have the shape it should. This runs in the error path,
+    // where a crash would leave the order button stuck.
+    const details = (Array.isArray(error.details) ? error.details : []).filter(
+      (entry): entry is { path?: string } => Boolean(entry) && typeof entry === "object"
+    );
+    for (const { path = "" } of details) {
       const field = FIELD_FOR_PATH[path];
       if (field) problem.fieldErrors[field.key] = field.message;
     }
-    return { ...problem, message: "Please check the highlighted fields.", retryable: false };
+    if (Object.keys(problem.fieldErrors).length > 0) {
+      return { ...problem, message: "Please check the highlighted fields.", retryable: false };
+    }
+    // Nothing on the form is wrong, so it is the bag: say what the limit is.
+    if (details.some(({ path = "" }) => path.startsWith("items"))) {
+      return {
+        ...problem,
+        message: `One order can hold at most ${MAX_PER_ITEM} of any item. We've checked your bag again.`,
+        retryable: false,
+        refreshBag: true,
+      };
+    }
+    return { ...problem, message: "Please check your details and try again.", retryable: false };
+  }
+
+  if (error.code === "idempotency_key_reused") {
+    return {
+      ...problem,
+      message: "Something changed while your order was being sent. Please check it and place it again.",
+      retryable: false,
+    };
+  }
+
+  if (error.code === "order_closed") {
+    return { ...problem, message: "That order was closed before it could be paid. Please place it again.", retryable: false };
   }
 
   if (error.code === "insufficient_stock") {
@@ -131,6 +176,7 @@ export function describeCheckoutError(
       ...problem,
       message: `${sentences.join(" ")} We've updated your bag.`.trim(),
       retryable: false,
+      refreshBag: true,
     };
   }
 
@@ -141,10 +187,11 @@ export function describeCheckoutError(
       ...problem,
       message: "Some items are no longer available. We've taken them out of your bag.",
       retryable: false,
+      refreshBag: true,
     };
   }
 
-  if (error.status === 429) {
+  if (error.status === 429 || error.code === "rate_limited") {
     return { ...problem, message: "Too many attempts. Please wait a minute and try again." };
   }
 

@@ -1,36 +1,18 @@
 import type { CartItem } from "@/lib/cart-store";
+import { SHIPPING_METHODS, type ShippingId, type ShippingMethod } from "@/data/shop-rules";
 
 // Plain data and arithmetic only, so server pages can import it too.
 
-export const FREE_SHIPPING_THRESHOLD = 75;
-
-export type ShippingId = "standard" | "express";
-
-export interface ShippingMethod {
-  id: ShippingId;
-  label: string;
-  eta: string;
-  price: number;
-  // Standard shipping is free above this subtotal.
-  freeOver?: number;
-}
-
-export const SHIPPING_METHODS: ShippingMethod[] = [
-  { id: "standard", label: "Standard", eta: "3–5 business days", price: 6, freeOver: FREE_SHIPPING_THRESHOLD },
-  { id: "express", label: "Express", eta: "1–2 business days", price: 14 },
-];
-
-export const COUNTRIES = [
-  "United States",
-  "United Kingdom",
-  "Canada",
-  "Australia",
-  "Germany",
-  "France",
-  "United Arab Emirates",
-  "Saudi Arabia",
-  "Egypt",
-];
+// The rules themselves (prices, countries, limits) come from the API's own definitions, copied
+// into data/shop-rules.ts by `npm run sync:data`. Only the arithmetic lives here.
+export {
+  COUNTRIES,
+  FREE_SHIPPING_THRESHOLD,
+  MAX_PER_ITEM,
+  SHIPPING_METHODS,
+  type ShippingId,
+  type ShippingMethod,
+} from "@/data/shop-rules";
 
 export interface Totals {
   subtotal: number;

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import SiteShell from "@/components/SiteShell";
 import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 import { CartProvider } from "@/lib/cart-context";
-import { getCatalog } from "@/lib/catalog";
+import { getCatalogState } from "@/lib/catalog";
 import { CatalogProvider } from "@/lib/catalog-context";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
@@ -20,6 +20,9 @@ const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
 });
+
+// Colours the browser's own bar on a phone to match the page.
+export const viewport: Viewport = { themeColor: "#f7f3ee" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -38,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const catalog = await getCatalog();
+  const { products: catalog, live } = await getCatalogState();
 
   return (
     <html
@@ -46,7 +49,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${cormorant.variable} ${manrope.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <CatalogProvider products={catalog}>
+        <CatalogProvider products={catalog} live={live}>
           <CartProvider>
             <SmoothScrollProvider>
               <SiteShell header={<Header />} footer={<Footer />}>

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 export const fieldClass =
-  "w-full border-0 border-b border-secondary/60 bg-transparent py-3 text-text placeholder:text-text/65 transition-colors focus:border-accent focus:outline-none aria-[invalid=true]:border-accent";
+  "w-full border-0 border-b border-secondary/60 bg-transparent py-3 text-text placeholder:text-text/65 transition-colors focus:border-accent-deep focus:shadow-[0_1px_0_0_var(--color-accent-deep)] focus:outline-none aria-[invalid=true]:border-accent-deep";
 
-const labelClass = "text-[11px] uppercase tracking-[0.2em] text-text/65";
+export const labelClass = "text-[11px] uppercase tracking-[0.2em] text-text/65";
 
 export function Field({
   id,

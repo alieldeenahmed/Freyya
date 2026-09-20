@@ -4,6 +4,7 @@
 
 - **Automated scans: done.** `Frontend/e2e/accessibility.spec.ts` runs axe against every storefront page, the main interactive states and the admin, using the WCAG 2.0, 2.1 and 2.2 A and AA rules plus axe's best-practice rules. They run in CI.
 - **Accessibility tree and focus: tested.** `Frontend/e2e/screen-reader.spec.ts` (in a real browser) and `Frontend/tests/components/screen-readers.test.tsx` check names, states, landmarks, live-region text, and where focus lands after each action. This covers most of the checklist below in principle: it proves the site *says* the right thing to the browser. It does not prove a reader *speaks* it well.
+- **Focus and tap size: measured.** The focus ring is the deep gold at 2 pixels, about 5:1 against the cream (it used to be about 2:1, under the 3:1 WCAG asks for). Everything a shopper presses on a phone is at least 40 pixels each way, checked in `Frontend/e2e/responsive.spec.ts`.
 - **Screen reader: not done.** Nobody has yet listened to the site with NVDA, VoiceOver or TalkBack. Until that happens, the project makes no claim of compliance.
 
 The checklist is written so you can confirm, by ear, what the tests already confirm by code. Focus on anything that sounds wrong, too long, repeated or missing.
@@ -57,6 +58,8 @@ Mark what fails and where. A pass means you could finish the task without seeing
 - [ ] Tab stays inside. Content behind it cannot be reached.
 - [ ] Changing a quantity announces the new quantity.
 - [ ] Escape closes it, and focus returns to the bag button.
+- [ ] Removing an item announces it, and focus stays inside the drawer.
+- [ ] If the shop changed the bag (an item sold out, or was cut back to ten), the "Your bag changed" note is read, and its "Got it" button works.
 
 ### Shade Match
 
@@ -69,6 +72,7 @@ Mark what fails and where. A pass means you could finish the task without seeing
 - [ ] Submitting with mistakes announces the errors, and focus lands on the first invalid field.
 - [ ] Shipping options read as a radio group with their price and delivery time.
 - [ ] A refused order (try one with more than the stock) announces the message.
+- [ ] With the API stopped, the message says the store is not answering and that the bag is safe, and the order button works again.
 - [ ] The confirmation page is read from the top, with the order number.
 
 ### Contact and newsletter
@@ -78,7 +82,7 @@ Mark what fails and where. A pass means you could finish the task without seeing
 ### Admin
 
 - [ ] Sign-in errors are announced.
-- [ ] Tables read with their headers, row by row.
+- [ ] Tables read with their headers, row by row. Check this in a narrow window too, where the rows become cards: it should still be read as a table.
 - [ ] The confirmation before cancelling an order is announced as an alert dialog, and focus goes into it.
 - [ ] The stock adjustment form is labelled, and errors are announced.
 

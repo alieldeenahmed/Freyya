@@ -6,7 +6,9 @@ import FadeImage from "@/components/FadeImage";
 import { gsap } from "@/lib/gsap";
 import { getLenis } from "@/lib/lenis";
 import { prefersReducedMotion } from "@/lib/motion";
+import BagNotice from "@/components/BagNotice";
 import { useCart } from "@/lib/cart-context";
+import { MAX_PER_ITEM, lineLimit } from "@/lib/cart-store";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/orders";
 
 const FOCUSABLE =
@@ -148,6 +150,8 @@ export default function CartDrawer() {
           </button>
         </div>
 
+        <BagNotice className="mt-6" />
+
         {items.length === 0 ? (
           <p className="mt-8 text-sm text-text/65">Your bag is empty.</p>
         ) : (
@@ -171,9 +175,9 @@ export default function CartDrawer() {
                     </p>
                   )}
                   <p className="mt-1 text-sm text-text/70">${item.price}</p>
-                  {item.quantity >= item.stock && (
+                  {item.quantity >= lineLimit(item.stock) && (
                     <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-accent-deep">
-                      Maximum available
+                      {item.stock > MAX_PER_ITEM ? "Maximum per order" : "Maximum available"}
                     </p>
                   )}
 
@@ -190,7 +194,7 @@ export default function CartDrawer() {
                     <button
                       type="button"
                       onClick={() => changeQuantity(item, item.quantity + 1)}
-                      disabled={item.quantity >= item.stock}
+                      disabled={item.quantity >= lineLimit(item.stock)}
                       aria-label={`Increase quantity of ${item.name}`}
                       className="h-8 w-8 border border-secondary/50 text-text/70 transition-colors hover:border-accent hover:text-accent-deep disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-secondary/50 disabled:hover:text-text/70"
                     >

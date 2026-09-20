@@ -15,6 +15,8 @@
     "lint": "npm --prefix Frontend run lint",
     "test": "npm --prefix Backend test && npm --prefix Frontend test",
     "test:e2e": "npm --prefix Frontend run test:e2e",
-    "build":"npm --prefix Backend run build && npm --prefix Frontend run build"
+    "build": "npm --prefix Backend run build && npm --prefix Frontend run build",
+    "sync:data": "npm --prefix Backend run sync:data",
+    "sync:data:check": "npm --prefix Backend run sync:data:check"
   }
 }

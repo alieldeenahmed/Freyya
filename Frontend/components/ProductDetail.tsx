@@ -9,6 +9,7 @@ import type { Product, Review } from "@/lib/types";
 import { gsap, Flip } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCart } from "@/lib/cart-context";
+import { MAX_PER_ITEM, lineLimit } from "@/lib/cart-store";
 import { getStock } from "@/lib/products";
 import { useProductReviews } from "@/lib/useProductReviews";
 
@@ -41,7 +42,7 @@ export default function ProductDetail({
   const stock = getStock(product, selectedVariant?.id);
   const inBag = items.find((i) => i.id === itemId)?.quantity ?? 0;
   const soldOut = stock <= 0;
-  const capReached = !soldOut && inBag >= stock;
+  const capReached = !soldOut && inBag >= lineLimit(stock);
   // Keep the button live while its "Added" confirmation plays out.
   const unavailable = soldOut || (capReached && !justAdded);
 
@@ -245,7 +246,7 @@ export default function ProductDetail({
                   .getElementById("reviews")
                   ?.scrollIntoView({ behavior: "smooth", block: "start" })
               }
-              className="group mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-text/65 transition-colors hover:text-text"
+              className="group mt-2 flex min-h-11 items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-text/65 transition-colors hover:text-text"
             >
               <StarRating rating={rating.average} size="h-3.5 w-3.5" />
               <span className="border-b border-transparent pb-0.5 transition-colors group-hover:border-accent">
@@ -358,7 +359,9 @@ export default function ProductDetail({
                 : soldOut
                   ? "Sold out"
                   : capReached
-                    ? `All ${stock} in your bag`
+                    ? stock > MAX_PER_ITEM
+                      ? `${MAX_PER_ITEM} in your bag, the most per order`
+                      : `All ${stock} in your bag`
                     : "Add to bag"}
             </span>
           </button>
@@ -368,7 +371,7 @@ export default function ProductDetail({
           <div className="mt-8 max-w-sm">
             <Link
               href="/shop"
-              className="group inline-flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
+              className="group inline-flex min-h-11 items-center gap-3 text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
             >
               <span
                 aria-hidden

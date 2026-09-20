@@ -13,6 +13,7 @@ import { useCatalog } from "@/lib/catalog-context";
 import {
   EMPTY_CART,
   clearCart,
+  explainChanges,
   readStoredCart,
   reconcileCart,
   subscribeCart,
@@ -31,6 +32,9 @@ interface CartContextValue {
   isOpen: boolean;
   itemCount: number;
   lastAdded: AddedNotice | null;
+  // What the shop changed in a saved bag since it was made: sold out, removed, cut back.
+  bagChanges: string[];
+  acknowledgeBagChanges: () => void;
   clearLastAdded: () => void;
   addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (id: string) => void;
@@ -49,6 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // What is saved is checked against the current catalog every time it is read.
   const stored = useSyncExternalStore(subscribeCart, readStoredCart, () => EMPTY_CART);
   const items = useMemo(() => reconcileCart(stored, catalog), [stored, catalog]);
+  const bagChanges = useMemo(() => explainChanges(stored, catalog), [stored, catalog]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [lastAdded, setLastAdded] = useState<AddedNotice | null>(null);
@@ -66,6 +71,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     },
     [current]
   );
+  // Saving the checked bag over the stored one is what makes the changes go away.
+  const acknowledgeBagChanges = useCallback(() => writeCart(current()), [current]);
   const removeItem = useCallback((id: string) => writeCart(withoutItem(current(), id)), [current]);
   const updateQuantity = useCallback(
     (id: string, quantity: number) => writeCart(withQuantity(current(), id, quantity)),
@@ -81,6 +88,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         isOpen,
         itemCount,
         lastAdded,
+        bagChanges,
+        acknowledgeBagChanges,
         clearLastAdded,
         addItem,
         removeItem,

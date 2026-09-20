@@ -90,13 +90,13 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={`group relative py-2 text-xs uppercase tracking-[0.2em] transition-colors hover:text-text ${
+                className={`group relative inline-flex min-h-11 items-center text-xs uppercase tracking-[0.2em] transition-colors hover:text-text ${
                   active ? "text-text" : "text-text/65"
                 }`}
               >
                 {link.label}
                 <span
-                  className={`absolute inset-x-0 bottom-0 h-px origin-center bg-accent transition-transform duration-300 ease-out group-hover:scale-x-100 ${
+                  className={`absolute inset-x-0 bottom-2 h-px origin-center bg-accent transition-transform duration-300 ease-out group-hover:scale-x-100 ${
                     active ? "scale-x-100" : "scale-x-0"
                   }`}
                 />

@@ -6,9 +6,9 @@ import { CatalogProvider } from "@/lib/catalog-context";
 import type { Product } from "@/lib/types";
 
 // Renders a component with the same providers the app wraps every page in.
-export function renderWithProviders(ui: ReactElement, catalog: Product[] = products) {
+export function renderWithProviders(ui: ReactElement, catalog: Product[] = products, live = true) {
   return render(
-    <CatalogProvider products={catalog}>
+    <CatalogProvider products={catalog} live={live}>
       <CartProvider>{ui}</CartProvider>
     </CatalogProvider>
   );

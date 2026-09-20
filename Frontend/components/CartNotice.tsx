@@ -111,9 +111,9 @@ export default function CartNotice() {
         <button
           type="button"
           onClick={handleView}
-          className="shrink-0 border-b border-accent pb-0.5 text-[10px] uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
+          className="inline-flex min-h-11 shrink-0 items-center text-[10px] uppercase tracking-[0.2em] text-text transition-colors hover:text-accent-deep"
         >
-          View bag
+          <span className="border-b border-accent pb-0.5">View bag</span>
         </button>
       </div>
 

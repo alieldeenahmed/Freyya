@@ -11,6 +11,7 @@ import {
   orderInputSchema,
   orderLookupSchema,
   payInputSchema,
+  safeId,
 } from "../schemas.js";
 import { getProduct, listProducts } from "../services/catalog.js";
 import { createOrder, getOrderForCustomer, payOrder } from "../services/orders.js";
@@ -45,7 +46,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
   app.get("/products", async () => ({ products: await listProducts(db) }));
 
   app.get<{ Params: { id: string } }>("/products/:id", async (request) => {
-    const product = await getProduct(db, request.params.id);
+    const product = await getProduct(db, safeId(request.params.id));
     if (!product) throw notFound("Product not found");
     return { product };
   });
@@ -69,7 +70,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
     async (request) => {
       const { email } = orderLookupSchema.parse({ email: request.query.email });
-      return { order: await getOrderForCustomer(db, request.params.id, email) };
+      return { order: await getOrderForCustomer(db, safeId(request.params.id), email) };
     }
   );
 
@@ -78,7 +79,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
     async (request) => {
       const { email } = payInputSchema.parse(request.body);
-      return { order: await payOrder(db, payments, request.params.id, email) };
+      return { order: await payOrder(db, payments, safeId(request.params.id), email) };
     }
   );
 };

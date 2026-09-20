@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "idempotency_fingerprint" text;

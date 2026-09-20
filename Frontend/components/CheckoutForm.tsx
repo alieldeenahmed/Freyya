@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import BagNotice from "@/components/BagNotice";
 import { Field, fieldClass } from "@/components/Field";
 import OrderSummary from "@/components/OrderSummary";
 import Select from "@/components/Select";
 import { useCart } from "@/lib/cart-context";
+import { useCatalogLive } from "@/lib/catalog-context";
 import {
   describeCheckoutError,
   payForOrder,
@@ -25,6 +27,17 @@ import { useHydrated } from "@/lib/useHydrated";
 
 type Errors = Partial<Record<keyof Fields, string>>;
 
+// The most the API accepts in each field. Typing past it would only come back as an error.
+const MAX_LENGTH: Record<keyof Fields, number> = {
+  email: 254,
+  name: 100,
+  line1: 120,
+  line2: 120,
+  city: 80,
+  postalCode: 20,
+  country: 100,
+};
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function SectionHeading({ number, title }: { number: string; title: string }) {
@@ -39,6 +52,7 @@ function SectionHeading({ number, title }: { number: string; title: string }) {
 export default function CheckoutForm() {
   const router = useRouter();
   const hydrated = useHydrated();
+  const live = useCatalogLive();
   const { items, clear, removeItem, updateQuantity } = useCart();
 
   const [fields, setFields] = useState<Fields>({
@@ -111,7 +125,7 @@ export default function CheckoutForm() {
         if (available > 0) updateQuantity(id, available);
         else removeItem(id);
       }
-      if (Object.keys(problem.stockLimits).length > 0) router.refresh();
+      if (Object.keys(problem.stockLimits).length > 0 || problem.refreshBag) router.refresh();
       if (!problem.retryable) resetKey();
 
       const firstField = Object.keys(problem.fieldErrors)[0];
@@ -126,6 +140,7 @@ export default function CheckoutForm() {
     onChange: set(key),
     "aria-invalid": Boolean(errors[key]),
     "aria-describedby": errors[key] ? `checkout-${key}-error` : undefined,
+    maxLength: MAX_LENGTH[key],
     className: fieldClass,
     ...extra,
   });
@@ -142,6 +157,7 @@ export default function CheckoutForm() {
     return (
       <div className="mx-auto max-w-6xl">
         <h1 className="font-serif text-4xl text-text sm:text-5xl">Checkout</h1>
+        <BagNotice className="mt-6 max-w-md" />
         <p className="mt-6 max-w-sm text-text/65">
           Your bag is empty. Add something you love and it will be waiting here.
         </p>
@@ -159,6 +175,16 @@ export default function CheckoutForm() {
     <div className="mx-auto max-w-6xl">
       <p className="text-sm uppercase tracking-widest text-accent-deep">Secure your order</p>
       <h1 className="mt-3 font-serif text-4xl text-text sm:text-5xl">Checkout</h1>
+      <BagNotice className="mt-8 max-w-xl" />
+      {!live && (
+        <div role="note" className="mt-8 max-w-xl border-l border-accent pl-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-accent-deep">Demo without a store server</p>
+          <p className="mt-2 text-sm leading-relaxed text-text/70">
+            This copy of Freyya can&apos;t reach its API, so it can&apos;t place orders. Browsing, the
+            bag and Shade Match all work. To try checkout, run the project locally with its API.
+          </p>
+        </div>
+      )}
 
       <div className="mt-14 grid grid-cols-1 gap-16 lg:grid-cols-[1fr_400px] lg:gap-24">
         <form onSubmit={handleSubmit} noValidate aria-label="Checkout" className="space-y-14">
@@ -216,7 +242,7 @@ export default function CheckoutForm() {
                 return (
                   <label
                     key={method.id}
-                    className="flex cursor-pointer items-center justify-between gap-4 border border-secondary/50 p-5 transition-colors has-[:checked]:border-accent has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-accent"
+                    className="flex cursor-pointer items-center justify-between gap-4 border border-secondary/50 p-5 transition-colors has-[:checked]:border-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent-deep"
                   >
                     <span className="flex items-center gap-4">
                       <input
@@ -299,7 +325,7 @@ export default function CheckoutForm() {
           </div>
           <Link
             href="/shop"
-            className="mt-6 inline-block text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
+            className="mt-4 inline-flex min-h-11 items-center text-xs uppercase tracking-[0.2em] text-text/65 transition-colors hover:text-text"
           >
             ← Keep shopping
           </Link>

@@ -125,3 +125,91 @@ describe("describeCheckoutError", () => {
     expect(problem.fieldErrors).toEqual({});
   });
 });
+
+describe("describeCheckoutError: when the store cannot be reached or answers badly", () => {
+  const problem = (error: unknown) => describeCheckoutError(error, { "dawn-cleanse": "Dawn Cleanse" });
+
+  it("says a timeout is safe to retry, because the same request key gives back the same order", () => {
+    const result = problem(new ApiError(0, "timeout", "x"));
+    expect(result.retryable).toBe(true);
+    expect(result.message).toMatch(/took too long/);
+    expect(result.message).toMatch(/not be charged twice/);
+    expect(result.refreshBag).toBe(false);
+  });
+
+  it("says the store is not answering, and that the bag is safe", () => {
+    const result = problem(new ApiError(502, "unavailable", "x"));
+    expect(result.retryable).toBe(true);
+    expect(result.message).toMatch(/not answering/);
+    expect(result.message).toMatch(/bag is safe/);
+  });
+
+  it("asks for a wait when rate limited, by code or by status", () => {
+    for (const error of [new ApiError(429, "rate_limited", "x"), new ApiError(429, "error", "x")]) {
+      const result = problem(error);
+      expect(result.message).toMatch(/Too many attempts/);
+      expect(result.retryable).toBe(true);
+    }
+  });
+
+  it("does not retry a key that was reused for a different order", () => {
+    const result = problem(new ApiError(422, "idempotency_key_reused", "technical words"));
+    expect(result.retryable).toBe(false);
+    expect(result.message).not.toMatch(/key|idempotency|technical/i);
+  });
+
+  it("says an order was closed before it could be paid", () => {
+    const result = problem(new ApiError(409, "order_closed", "This order can no longer be paid."));
+    expect(result.retryable).toBe(false);
+    expect(result.message).toMatch(/place it again/);
+  });
+
+  it("keeps the reason a stock hold ran out, in the store's own words", () => {
+    const result = problem(new ApiError(409, "reservation_expired", "Your items were held for too long."));
+    expect(result.message).toBe("Your items were held for too long.");
+    expect(result.retryable).toBe(false);
+  });
+
+  it("names the limit per order when the bag is what the API objected to", () => {
+    const result = problem(
+      new ApiError(400, "validation_error", "x", [{ path: "items.0.quantity", message: "too big" }])
+    );
+    expect(result.message).toMatch(/at most 10/);
+    expect(result.refreshBag).toBe(true);
+    expect(result.retryable).toBe(false);
+    expect(result.fieldErrors).toEqual({});
+  });
+
+  it("does not say fields are highlighted when none were", () => {
+    const result = problem(new ApiError(400, "validation_error", "x", [{ path: "shippingId", message: "bad" }]));
+    expect(result.message).not.toMatch(/highlighted/);
+    expect(result.message).toMatch(/check your details/i);
+  });
+
+  it("copes with details that are missing or are not a list", () => {
+    for (const details of [undefined, null, "text", 5, {}, [null]]) {
+      expect(() => problem(new ApiError(400, "validation_error", "x", details))).not.toThrow();
+    }
+  });
+
+  it("asks for the bag to be checked again when items sold out or vanished", () => {
+    const stock = problem(
+      new ApiError(409, "insufficient_stock", "x", { items: [{ skuId: "dawn-cleanse", requested: 3, available: 1 }] })
+    );
+    expect(stock.refreshBag).toBe(true);
+    expect(stock.stockLimits).toEqual({ "dawn-cleanse": 1 });
+
+    const gone = problem(new ApiError(422, "unknown_item", "x", { skuIds: ["dawn-cleanse"] }));
+    expect(gone.refreshBag).toBe(true);
+    expect(gone.stockLimits).toEqual({ "dawn-cleanse": 0 });
+  });
+
+  it("answers an unexpected failure with something safe to show, and allows a retry", () => {
+    for (const error of [new Error("boom"), "text", null, undefined, new ApiError(500, "internal_error", "Something went wrong.")]) {
+      const result = problem(error);
+      expect(result.message).toMatch(/try again/i);
+      expect(result.retryable).toBe(true);
+      expect(result.message).not.toMatch(/boom|Error:/);
+    }
+  });
+});

@@ -17,7 +17,9 @@
     "db:seed": "tsx --env-file-if-exists=.env src/db/seed.ts",
     "admin:hash": "tsx scripts/hash-password.ts",
     "test": "vitest run",
-    "db:reset:test": "tsx --env-file-if-exists=.env.test scripts/reset-test-db.ts"
+    "db:reset:test": "tsx --env-file-if-exists=.env.test scripts/reset-test-db.ts",
+    "sync:data": "tsx scripts/sync-storefront-data.ts",
+    "sync:data:check": "tsx scripts/sync-storefront-data.ts --check"
   },
   "license": "MIT",
   "dependencies": {

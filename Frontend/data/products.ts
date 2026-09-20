@@ -1,3 +1,6 @@
+// GENERATED from Backend/src/db/seed-data.ts by `npm run sync:data`. Do not edit by hand.
+// The API is the authority. This is a snapshot for when the API cannot be reached, and the
+// data the storefront's tests run against.
 import type { Product } from "@/lib/types";
 
 export const products: Product[] = [

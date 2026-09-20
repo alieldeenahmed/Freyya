@@ -1,89 +1,92 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { FILES, STOREFRONT_DATA } from "../scripts/storefront-data.js";
 import {
   COUNTRIES,
   FREE_SHIPPING_THRESHOLD_CENTS,
+  MAX_PER_ITEM,
   SHIPPING_METHODS,
 } from "../src/domain/pricing.js";
+import { orderInputSchema } from "../src/schemas.js";
+import { validOrder } from "./helpers.js";
 
-// The storefront and the API each keep a copy of the shipping rules and the catalog,
-// so the packages can be deployed on their own. These tests read the storefront's
-// files as text and fail as soon as the two copies stop agreeing.
+// The API owns the catalog and the shop's rules. The storefront keeps a generated snapshot of
+// them (Frontend/data), so it can show the shop when the API cannot be reached. These tests
+// fail the moment the snapshot stops matching, or someone hand-writes a rule the storefront
+// should be getting from the snapshot.
 
 const frontend = path.resolve(import.meta.dirname, "../../Frontend");
-const read = (file: string) =>
-  readFileSync(path.join(frontend, file), "utf8").replace(/\r\n/g, "\n");
-const squash = (text: string) => text.replace(/\s+/g, " ").trim();
+const lf = (text: string) => text.replace(/\r\n/g, "\n");
+const readFrontend = (file: string) => lf(readFileSync(path.join(frontend, file), "utf8"));
 
-describe.skipIf(!existsSync(frontend))("storefront and API agree", () => {
-  describe("shipping rules", () => {
-    const shipping = read("lib/shipping.ts");
+describe.skipIf(!existsSync(frontend))("the storefront's snapshot of the API's data", () => {
+  it.each(FILES.map(({ file, render }) => [file, render] as const))(
+    "Frontend/data/%s is exactly what the generator writes from the API's own files",
+    (file, render) => {
+      const current = lf(readFileSync(path.join(STOREFRONT_DATA, file), "utf8"));
+      expect(
+        current === render(),
+        `Frontend/data/${file} is out of date. Run "npm run sync:data" from the repository root.`
+      ).toBe(true);
+    }
+  );
 
-    it("use the same free-shipping threshold", () => {
-      const match = shipping.match(/FREE_SHIPPING_THRESHOLD = (\d+)/);
-      expect(match, "threshold not found in Frontend/lib/shipping.ts").not.toBeNull();
-      expect(Number(match![1]) * 100).toBe(FREE_SHIPPING_THRESHOLD_CENTS);
-    });
-
-    it("offer the same methods, prices and delivery times", () => {
-      const parsed = [
-        ...shipping.matchAll(
-          /\{ id: "(\w+)", label: "([^"]+)", eta: "([^"]+)", price: (\d+)(, freeOver:)?/g
-        ),
-      ].map(([, id, label, eta, price, freeOver]) => ({
-        id,
-        label,
-        eta,
-        priceCents: Number(price) * 100,
-        hasFreeOver: Boolean(freeOver),
-      }));
-
-      expect(parsed.length).toBeGreaterThan(0);
-      expect(parsed).toEqual(
-        SHIPPING_METHODS.map((method) => ({
-          id: method.id,
-          label: method.label,
-          eta: method.eta,
-          priceCents: method.priceCents,
-          hasFreeOver: method.freeOverCents !== undefined,
-        }))
-      );
-    });
-
-    it("deliver to the same countries", () => {
-      const block = shipping.match(/COUNTRIES = \[([\s\S]*?)\];/);
-      expect(block, "COUNTRIES not found in Frontend/lib/shipping.ts").not.toBeNull();
-      const countries = [...(block![1] ?? "").matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-
-      expect(countries.length).toBeGreaterThan(0);
-      expect(countries).toEqual([...COUNTRIES]);
-    });
+  it("is marked as generated, so nobody edits it by hand", () => {
+    for (const { file } of FILES) {
+      expect(readFrontend(`data/${file}`)).toMatch(/^\/\/ GENERATED from .* Do not edit by hand\./);
+    }
   });
 
-  describe("catalog", () => {
-    // The API's seed data began as a copy of the storefront's bundled catalog.
-    const bodyAfter = (text: string, marker: RegExp) => {
-      const match = marker.exec(text);
-      expect(match, `${marker} not found`).not.toBeNull();
-      return squash(text.slice(match!.index + match![0].length));
-    };
+  it("holds the same shipping rules, prices and limits as the API, in dollars", () => {
+    const text = readFrontend("data/shop-rules.ts");
 
-    it("has the same products, prices, shades and stock in the bundled copy and the seed data", () => {
-      const storefront = bodyAfter(
-        read("data/products.ts"),
-        /export const products: Product\[\] =/
+    expect(text).toContain(`FREE_SHIPPING_THRESHOLD = ${FREE_SHIPPING_THRESHOLD_CENTS / 100};`);
+    expect(text).toContain(`MAX_PER_ITEM = ${MAX_PER_ITEM};`);
+    for (const method of SHIPPING_METHODS) {
+      expect(text).toContain(
+        `id: "${method.id}", label: "${method.label}", eta: "${method.eta}", price: ${method.priceCents / 100}`
       );
-      const seed = bodyAfter(
-        readFileSync(path.resolve(import.meta.dirname, "../src/db/seed-data.ts"), "utf8").replace(
-          /\r\n/g,
-          "\n"
-        ),
-        /export const seedProducts: SeedProduct\[\] =/
-      );
+    }
+    for (const country of COUNTRIES) expect(text).toContain(`"${country}"`);
+  });
 
-      expect(storefront.length).toBeGreaterThan(1000);
-      expect(seed).toBe(storefront);
-    });
+  it("states the limit the API really enforces", () => {
+    const within = orderInputSchema.safeParse(
+      validOrder({ items: [{ skuId: "dawn-cleanse", quantity: MAX_PER_ITEM }] })
+    );
+    const over = orderInputSchema.safeParse(
+      validOrder({ items: [{ skuId: "dawn-cleanse", quantity: MAX_PER_ITEM + 1 }] })
+    );
+    expect(within.success).toBe(true);
+    expect(over.success).toBe(false);
+  });
+});
+
+describe.skipIf(!existsSync(frontend))("the storefront's own code", () => {
+  const stripComments = (code: string) => code.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it("does not write out shipping prices, countries or the order limit itself", () => {
+    const shipping = stripComments(readFrontend("lib/shipping.ts"));
+
+    expect(shipping).toContain('from "@/data/shop-rules"');
+    expect(shipping).not.toMatch(/FREE_SHIPPING_THRESHOLD\s*=/);
+    expect(shipping).not.toMatch(/SHIPPING_METHODS\s*(:[^=]+)?=/);
+    expect(shipping).not.toMatch(/COUNTRIES\s*=/);
+    expect(shipping).not.toMatch(/price:\s*\d/);
+  });
+
+  it("takes the order limit from the snapshot, not from a number of its own", () => {
+    const cart = stripComments(readFrontend("lib/cart-store.ts"));
+    expect(cart).toContain('from "@/data/shop-rules"');
+    expect(cart).not.toMatch(/MAX_PER_ITEM\s*=\s*\d/);
+  });
+
+  it("does not keep another copy of the catalog anywhere but the snapshot", () => {
+    for (const file of ["lib/catalog.ts", "lib/products.ts", "lib/quiz.ts", "lib/shop.ts"]) {
+      expect(stripComments(readFrontend(file)), file).not.toMatch(
+        /name:\s*"(Dawn Cleanse|Golden Hour Serum|Freyya Balm)"/
+      );
+    }
   });
 });

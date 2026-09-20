@@ -2,6 +2,9 @@ import type { ShippingId } from "../db/schema.js";
 
 // All money is whole cents, so totals never pick up floating-point error.
 
+// The most of one item a single order can hold, however many lines it is spread over.
+export const MAX_PER_ITEM = 10;
+
 export const FREE_SHIPPING_THRESHOLD_CENTS = 7500;
 
 export interface ShippingMethod {

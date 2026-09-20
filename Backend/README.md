@@ -27,6 +27,8 @@ npm run db:seed
 npm run dev
 ```
 
+**Updating an existing database.** Migrations are additive. After pulling changes, run `npm run db:migrate` again. The latest one (`0001`) adds a column to `orders` that remembers what each idempotency key was first used for. Without it, placing an order fails.
+
 The API runs on [http://localhost:4000](http://localhost:4000).
 
 ### Admin login
@@ -64,12 +66,29 @@ Copy the output into `ADMIN_PASSWORD_HASH`, and set `ADMIN_EMAIL`.
 | `npm run db:migrate` | Apply migrations |
 | `npm run db:seed` | Load the launch catalog. Safe to repeat; existing stock is left alone |
 | `npm run admin:hash` | Make a password hash for the admin login |
+| `npm run sync:data` | Write the storefront's snapshot of the catalog and shop rules (`../Frontend/data`) from this package's own files |
+| `npm run sync:data:check` | Fail if that snapshot is out of date. Used in CI |
 | `npm test` | Run the tests |
 | `npm run db:reset:test` | Clear orders and restore launch stock in the test database (used before the end-to-end run) |
 
 ## API
 
-Errors come back as `{ "error": { "code", "message", "details"? } }`.
+Errors come back as `{ "error": { "code", "message", "details"? } }`. The `code` is stable and is what a client should act on.
+
+| Status | `code` | Meaning |
+| --- | --- | --- |
+| 400 | `validation_error` | A field is missing or wrong. `details` lists `{ path, message }` for each |
+| 401 | `unauthorized` | No admin session |
+| 403 | `forbidden_origin` | A write from an origin that is not allowed |
+| 404 | `not_found` | No such product, order or item. Also returned for an id that could not exist |
+| 409 | `insufficient_stock` | Not enough stock. `details.items` says how many are available of each |
+| 409 | `reservation_expired` | The stock hold on an unpaid order ran out |
+| 409 | `order_closed` | The order can no longer be paid |
+| 409 | `invalid_transition` | The status change is not allowed. `details.allowed` lists what is |
+| 422 | `unknown_item` | An item does not exist or is switched off |
+| 422 | `idempotency_key_reused` | The request key was already used for a different order |
+| 429 | `rate_limited` | Too many requests. `Retry-After` says how long to wait |
+| 500 | `internal_error` | Something failed inside. The message never says what |
 
 ### Storefront
 
@@ -119,27 +138,42 @@ Sign in with `POST /admin/login`. The session is an http-only cookie. Every othe
 
 **Prices come from the database.** The client sends items and quantities, nothing else. Money is whole cents throughout.
 
-**A retry is safe.** With the same `Idempotency-Key`, a repeated checkout returns the original order and takes stock once, even if two copies arrive at the same moment.
+**A retry is safe, and a mistaken one is refused.** With the same `Idempotency-Key`, a repeated checkout returns the original order and takes stock once, even if ten copies arrive at the same moment. The order the key was first used for is remembered as a fingerprint (a hash of the buyer, address, shipping method and the items, merged and sorted). The same key with a *different* order is refused with `422 idempotency_key_reused`, instead of quietly handing back an unrelated order. A retry after the order was paid returns it as paid, and one after it was cancelled returns it as cancelled, without taking stock again. Keys are 8 to 100 letters, digits or `. _ : -`.
 
-**Unpaid orders don't hold stock forever.** An order starts as `pending_payment` and holds its stock for `RESERVATION_MINUTES`. A sweep every minute cancels expired ones and returns the stock. Paying after the hold has run out fails cleanly.
+**Limits are checked on the server.** One order holds at most 10 of any item, counting every line it appears on, so splitting an item across two lines does not get round it. Text that Postgres cannot store, and ids that cannot exist, are refused up front rather than reaching the database.
 
-**Order status has rules.** `pending_payment → paid → shipped → delivered`. Cancelling is allowed before shipping and returns the stock. A refund is allowed after shipping and doesn't, because the goods may not be resellable. `cancelled` and `refunded` are final.
+**Unpaid orders don't hold stock forever, and never block a buyer once they have run out.** An order starts as `pending_payment` and holds its stock for `RESERVATION_MINUTES`. A sweep every minute cancels expired ones and returns the stock. Placing an order also releases any hold that has run out before it checks stock, so nobody is turned away because the sweep has not come round yet. Paying after the hold has run out fails cleanly, and a payment and a sweep arriving together release the stock once.
+
+**Order status has rules.** `pending_payment → paid → shipped → delivered`. Cancelling is allowed before shipping and returns the stock. A refund is allowed after shipping and doesn't, because the goods may not be resellable. `cancelled` and `refunded` are final. The rules are one table in `src/domain/order-status.ts`, and a test checks all 36 pairs of statuses against the API. Only the admin can change a status: customers have no route that does, and a status or timestamp sent in a request body is ignored. Every change locks the order's row first, so two admins pressing at once cannot both win.
 
 **Payments are simulated.** `src/services/payments.ts` defines a small `PaymentProvider` interface and a simulated one that always succeeds. No card details exist anywhere in the API. A real provider would implement the same interface.
 
 **Admin security.**
 - The password is stored as a salted scrypt hash. Sessions are random tokens in an http-only cookie, and only a hash of each token is stored.
 - A wrong email and a wrong password take the same time and give the same answer.
-- Sign-in is limited to five tries a minute.
-- Writes from an origin that isn't in `CORS_ORIGINS` are refused.
+- Sign-in is limited to five tries a minute, and once the limit is hit even the right password waits.
+- Writes from an origin that isn't in `CORS_ORIGINS` are refused. The cookie is `SameSite=Lax`, `HttpOnly`, and `Secure` in production.
+- A test walks every route the API registers and checks that each one is either on a short list of open routes or answers `401` without a session, before it reads anything else. Adding a route without deciding which list it belongs on fails the test.
+- Admin responses and order lookups are sent with `Cache-Control: no-store`.
+- Request logs drop the query string, because an order lookup carries the customer's email in it.
+- Configuration errors name the setting that is wrong and never repeat its value.
+- One weakness is known and left alone: the password hash uses scrypt with Node's default cost. That is fine for one admin behind a rate limit, but a shared or public deployment should raise it.
 
 **Customers can't probe for orders.** Looking one up needs the number and the email, and a wrong number and a wrong email give the same `404`. Lookups are rate limited.
 
 ## Tests
 
-`npm test` runs 88 tests in 6 files: the pricing and status rules, password hashing, and the API against a real database, including concurrent orders, retries, expiry, sign-in and sessions, order transitions and stock adjustments.
+`npm test` runs 249 tests in 9 files, against a real database:
 
-Four of them are contract tests (`tests/contract.test.ts`). The storefront keeps its own copy of the shipping rules and the catalog, so that either package can be deployed alone. These tests read the storefront's files and fail if the copies drift from `src/domain/pricing.ts` and `src/db/seed-data.ts`. They are skipped when the `Frontend` folder is not next to this one.
+| File | What is checked |
+| --- | --- |
+| `orders`, `catalog`, `pricing`, `auth`, `admin` | Ordering, pricing, stock, expiry, sign-in, sessions, order transitions and stock adjustments |
+| `concurrency` | Buyers against buyers, buyers against admin adjustments, orders against the expiry sweep, payments against cancellations, ten identical requests at once, one key with two different orders, and dozens of malformed inputs. After every race, each item's stock must equal the sum of its ledger and never be below zero |
+| `order-state-machine` | All 36 status pairs through the API, the effect of each on stock, and every way a customer might try to change a status |
+| `security` | Every route is open or protected on purpose, cookie flags, origin checks, sign-in limits, `no-store` on personal data, hostile ids and NUL characters, and nothing from the environment in any response |
+| `contract` | The storefront's generated snapshot matches this package's files exactly |
+
+The `contract` tests read the storefront's files and fail if its snapshot of the catalog and shop rules is not exactly what `npm run sync:data` writes from `src/domain/pricing.ts` and `src/db/seed-data.ts`, or if the storefront's own code writes one of those rules by hand. They are skipped when the `Frontend` folder is not next to this one.
 
 The database tests wipe their tables, so they run against a separate database. Put its connection string in `.env.test`:
 
