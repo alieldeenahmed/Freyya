@@ -97,7 +97,8 @@ export async function transitionOrder(db: Db, id: string, to: OrderStatus, actor
       return;
     }
 
-    const now = new Date();
+    // Every time in the system is the database's, so instances with different clocks agree.
+    const now = sql`now()`;
     await tx
       .update(orders)
       .set({
@@ -183,7 +184,6 @@ export async function listMovements(db: Db, skuId: string, limit = 50) {
 }
 
 export async function getStats(db: Db, lowThreshold: number) {
-  const weekAgo = new Date(Date.now() - 7 * 86_400_000);
 
   const [byStatus, [revenue], [recent], lowStock] = await Promise.all([
     db.select({ status: orders.status, total: count() }).from(orders).groupBy(orders.status),
@@ -191,7 +191,10 @@ export async function getStats(db: Db, lowThreshold: number) {
       .select({ cents: sum(orders.totalCents) })
       .from(orders)
       .where(inArray(orders.status, ["paid", "shipped", "delivered"])),
-    db.select({ total: count() }).from(orders).where(gte(orders.createdAt, weekAgo)),
+    db
+      .select({ total: count() })
+      .from(orders)
+      .where(gte(orders.createdAt, sql`now() - interval '7 days'`)),
     db
       .select({
         skuId: skus.id,

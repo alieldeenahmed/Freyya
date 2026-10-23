@@ -15,9 +15,12 @@ import {
 } from "../schemas.js";
 import { getProduct, listProducts } from "../services/catalog.js";
 import { createOrder, getOrderForCustomer, payOrder } from "../services/orders.js";
+import { limitByAddress } from "../services/rate-limit.js";
+import { releaseBeforeRead } from "../services/reservations.js";
 
 export const publicRoutes: FastifyPluginAsync = async (app) => {
   const { db, config, payments } = app.ctx;
+  const limits = app.ctx.rateLimit;
 
   app.get("/health", async (_request, reply) => {
     try {
@@ -41,11 +44,17 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     })),
     countries: COUNTRIES,
     reservationMinutes: config.RESERVATION_MINUTES,
+    demo: config.DEMO_MODE,
   }));
 
-  app.get("/products", async () => ({ products: await listProducts(db) }));
+  // Stock is read here, so a hold that has just run out is given back first.
+  app.get("/products", async () => {
+    await releaseBeforeRead(db);
+    return { products: await listProducts(db) };
+  });
 
   app.get<{ Params: { id: string } }>("/products/:id", async (request) => {
+    await releaseBeforeRead(db);
     const product = await getProduct(db, safeId(request.params.id));
     if (!product) throw notFound("Product not found");
     return { product };
@@ -53,7 +62,21 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/orders",
-    { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    {
+      preHandler: [
+        limitByAddress(db, limits, { name: "orders", max: 10, windowSeconds: 60 }),
+        // The public demo also caps how many orders one address can place in an hour.
+        ...(config.DEMO_MODE
+          ? [
+              limitByAddress(db, limits, {
+                name: "demo-orders",
+                max: config.DEMO_ORDERS_PER_IP_PER_HOUR,
+                windowSeconds: 3600,
+              }),
+            ]
+          : []),
+      ],
+    },
     async (request, reply) => {
       const input = orderInputSchema.parse(request.body);
       const header = request.headers["idempotency-key"];
@@ -67,7 +90,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
   // Looking an order up needs its number and the email it was placed with.
   app.get<{ Params: { id: string }; Querystring: { email?: string } }>(
     "/orders/:id",
-    { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
+    { preHandler: limitByAddress(db, limits, { name: "order-lookup", max: 30, windowSeconds: 60 }) },
     async (request) => {
       const { email } = orderLookupSchema.parse({ email: request.query.email });
       return { order: await getOrderForCustomer(db, safeId(request.params.id), email) };
@@ -76,7 +99,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: { id: string } }>(
     "/orders/:id/pay",
-    { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    { preHandler: limitByAddress(db, limits, { name: "order-pay", max: 10, windowSeconds: 60 }) },
     async (request) => {
       const { email } = payInputSchema.parse(request.body);
       return { order: await payOrder(db, payments, safeId(request.params.id), email) };

@@ -25,6 +25,20 @@ export interface TestContext {
   reset: () => Promise<void>;
 }
 
+// Pooled and direct connections to one database differ only by "-pooler" in the host name.
+const endpointOf = (url: string) => new URL(url).hostname.replace(/-pooler(?=\.)/, "");
+
+// The tests wipe every table, so they must never be pointed at the public demo. Two checks:
+// the demo database's host (set DEMO_DATABASE_HOST, not a secret) is refused by name, and any
+// database carrying the demo marker row is refused once connected. The marker is what makes
+// this hold even when nobody has set the host.
+function refuseDemoHost(url: string) {
+  const demoHost = process.env.DEMO_DATABASE_HOST;
+  if (demoHost && endpointOf(url) === endpointOf(`postgresql://x@${demoHost}/x`)) {
+    throw new Error("TEST_DATABASE_URL points at the demo database. The tests refuse to run there.");
+  }
+}
+
 // Everything runs against a disposable database branch. Refuse to touch anything else.
 export async function createTestContext(
   overrides: Partial<Config> = {},
@@ -39,6 +53,7 @@ export async function createTestContext(
   if (url === process.env.DATABASE_URL) {
     throw new Error("TEST_DATABASE_URL must not be the same as DATABASE_URL.");
   }
+  refuseDemoHost(url);
 
   const config = loadConfig({
     DATABASE_URL: url,
@@ -46,10 +61,14 @@ export async function createTestContext(
     CORS_ORIGINS: ORIGIN,
     ADMIN_EMAIL,
     ADMIN_PASSWORD_HASH: await hashPassword(ADMIN_PASSWORD),
-    ...(overrides as Record<string, string>),
+    // Settings are strings in the environment, so booleans and numbers are written out as such.
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([key, value]) => [key, value === undefined ? undefined : String(value)])
+    ),
   });
 
-  const { db, pool } = createDb(url);
+  const { db, pool } = createDb(url, { max: 10 });
+  await refuseDemoMarker(db, pool);
   const app = await buildApp({ config, db, rateLimit: options.rateLimit ?? false });
 
   // Launch stock for every SKU, so a reset is a few statements instead of a full re-seed.
@@ -62,7 +81,7 @@ export async function createTestContext(
 
   const reset = async () => {
     await db.execute(
-      sql`truncate table admin_sessions, inventory_movements, order_items, orders restart identity cascade`
+      sql`truncate table admin_sessions, inventory_movements, order_items, orders, rate_limits restart identity cascade`
     );
     const rows = launchStock.map((row) => sql`(${row.id}, ${row.stock}::int)`);
     await db.execute(
@@ -84,6 +103,21 @@ export async function createTestContext(
       await pool.end();
     },
   };
+}
+
+// Second line of defence: a database that says it is the demo is never touched.
+async function refuseDemoMarker(db: Db, pool: { end: () => Promise<void> }) {
+  const rows = await db.execute(
+    sql`select 1 from information_schema.tables where table_name = 'app_meta'`
+  );
+  if (rows.rows.length === 0) return;
+  const marked = await db.execute(
+    sql`select 1 from app_meta where key = 'database_role' and value = 'demo'`
+  );
+  if (marked.rows.length > 0) {
+    await pool.end();
+    throw new Error("This database is marked as the demo database. The tests refuse to run there.");
+  }
 }
 
 export const validOrder = (overrides: Record<string, unknown> = {}) => ({

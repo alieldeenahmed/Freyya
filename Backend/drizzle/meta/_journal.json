@@ -15,6 +15,13 @@
       "when": 1789917706169,
       "tag": "0001_idempotency_fingerprint",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792795807381,
+      "tag": "0002_rate_limits_and_app_meta",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
-import type { Db } from "./client.js";
+import { eq, sql } from "drizzle-orm";
+import type { Db, Tx } from "./client.js";
 import { inventoryMovements, products, skus } from "./schema.js";
 import { seedProducts, type SeedProduct } from "./seed-data.js";
 
@@ -31,7 +31,11 @@ function skuRows(product: SeedProduct) {
 
 // Safe to run again: product details are refreshed, but stock that already exists is left alone.
 export async function seedCatalog(db: Db, catalog: SeedProduct[] = seedProducts) {
-  await db.transaction(async (tx) => {
+  await db.transaction((tx) => seedCatalogIn(tx, catalog));
+}
+
+export async function seedCatalogIn(tx: Tx, catalog: SeedProduct[] = seedProducts) {
+  {
     for (const [index, product] of catalog.entries()) {
       const values = {
         name: product.name,
@@ -52,7 +56,7 @@ export async function seedCatalog(db: Db, catalog: SeedProduct[] = seedProducts)
       await tx
         .insert(products)
         .values({ id: product.id, ...values })
-        .onConflictDoUpdate({ target: products.id, set: { ...values, updatedAt: new Date() } });
+        .onConflictDoUpdate({ target: products.id, set: { ...values, updatedAt: sql`now()` } });
 
       for (const row of skuRows(product)) {
         const [created] = await tx.insert(skus).values(row).onConflictDoNothing().returning();
@@ -71,5 +75,5 @@ export async function seedCatalog(db: Db, catalog: SeedProduct[] = seedProducts)
         }
       }
     }
-  });
+  }
 }

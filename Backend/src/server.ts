@@ -1,27 +1,18 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { createDb } from "./db/client.js";
-import { expireReservations } from "./services/orders.js";
 
+// This file is the entrypoint both for local development (`npm run dev`, `npm start`) and for
+// Vercel, which finds it by name and routes requests to the app once it is listening.
+//
+// Nothing runs in the background. A serverless instance can be frozen or thrown away between
+// requests, so a timer cannot be relied on. Expired stock holds are given back when an order
+// is placed, when the catalog is read, and by the scheduled call to /internal/sweep-reservations.
 const config = loadConfig();
-const { db, pool } = createDb(config.DATABASE_URL);
+const { db, pool } = createDb(config.DATABASE_URL, { max: config.DB_POOL_MAX });
 const app = await buildApp({ config, db, logger: true, rateLimit: config.RATE_LIMIT });
 
-// Unpaid orders hold stock. Give it back once the hold runs out.
-const sweep = async () => {
-  try {
-    const released = await expireReservations(db);
-    if (released > 0) app.log.info({ released }, "released expired reservations");
-  } catch (error) {
-    app.log.error(error, "failed to release expired reservations");
-  }
-};
-await sweep();
-const timer = setInterval(sweep, 60_000);
-timer.unref();
-
 const shutdown = async () => {
-  clearInterval(timer);
   await app.close();
   await pool.end();
   process.exit(0);

@@ -123,6 +123,10 @@ export const orders = pgTable(
     ),
     check("orders_totals_consistent", sql`${t.subtotalCents} + ${t.shippingCents} = ${t.totalCents}`),
     index("orders_status_created_idx").on(t.status, t.createdAt),
+    // The expiry sweep only ever looks at unpaid orders, ordered by when their hold runs out.
+    index("orders_unpaid_hold_idx")
+      .on(t.reservedUntil)
+      .where(sql`${t.status} = 'pending_payment'`),
     index("orders_email_idx").on(sql`lower(${t.email})`),
   ]
 );
@@ -149,6 +153,7 @@ export const orderItems = pgTable(
   (t) => [
     check("order_items_quantity_positive", sql`${t.quantity} > 0`),
     index("order_items_order_idx").on(t.orderId),
+    index("order_items_sku_idx").on(t.skuId),
   ]
 );
 
@@ -186,4 +191,19 @@ export const adminSessions = pgTable("admin_sessions", {
   email: text("email").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+// Counters for the rate limits that have to hold across every API instance. A row is one
+// caller in one bucket, and its window is measured with the database clock.
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+  count: integer("count").notNull().default(0),
+});
+
+// Small facts about the database itself. The demo reset refuses to run unless this says the
+// database is the demo one, so it can never be pointed at a real or test database by mistake.
+export const appMeta = pgTable("app_meta", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
 });

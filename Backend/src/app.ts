@@ -8,13 +8,17 @@ import { corsOrigins, type Config } from "./config.js";
 import type { Db } from "./db/client.js";
 import { HttpError } from "./errors.js";
 import { adminRoutes } from "./routes/admin.js";
+import { internalRoutes } from "./routes/internal.js";
 import { publicRoutes } from "./routes/public.js";
+import { clientIp } from "./services/client-ip.js";
 import { simulatedPayments, type PaymentProvider } from "./services/payments.js";
 
 export interface AppContext {
   config: Config;
   db: Db;
   payments: PaymentProvider;
+  // Whether requests are counted against limits. Tests that make many orders switch it off.
+  rateLimit: boolean;
 }
 
 declare module "fastify" {
@@ -55,7 +59,12 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
     trustProxy: config.TRUST_PROXY,
   });
 
-  app.decorate("ctx", { config, db, payments: options.payments ?? simulatedPayments });
+  app.decorate("ctx", {
+    config,
+    db,
+    payments: options.payments ?? simulatedPayments,
+    rateLimit: options.rateLimit !== false,
+  });
 
   const routeTable: { method: string; url: string }[] = [];
   app.decorate("routeTable", routeTable);
@@ -74,19 +83,27 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   await app.register(cookie);
   // A generous ceiling for everything; the sensitive routes set tighter limits of their own.
   if (options.rateLimit !== false) {
-    await app.register(rateLimit, { global: true, max: 300, timeWindow: "1 minute" });
+    // This one is kept in memory, per instance, as a coarse guard against floods. The limits that
+    // matter (sign-in, orders, payment) are counted in the database, shared by every instance.
+    await app.register(rateLimit, {
+      global: true,
+      max: 300,
+      timeWindow: "1 minute",
+      keyGenerator: (request) => clientIp(request),
+    });
   }
 
   // Admin data and customers' orders are personal. Nothing should keep a copy of them.
   app.addHook("onSend", async (request, reply) => {
     const path = request.url.split("?")[0] ?? "";
-    if (path.startsWith("/admin") || path.startsWith("/orders")) {
+    if (path.startsWith("/admin") || path.startsWith("/orders") || path.startsWith("/internal")) {
       reply.header("cache-control", "no-store");
     }
   });
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof HttpError) {
+      if (error.headers) reply.headers(error.headers);
       return reply.status(error.status).send({
         error: { code: error.code, message: error.message, details: error.details },
       });
@@ -131,6 +148,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
 
   await app.register(publicRoutes);
   await app.register(adminRoutes, { prefix: "/admin" });
+  await app.register(internalRoutes, { prefix: "/internal" });
 
   return app;
 }
