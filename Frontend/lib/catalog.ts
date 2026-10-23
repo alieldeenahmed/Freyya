@@ -9,7 +9,7 @@ const REVALIDATE_SECONDS = 30;
 
 // A page render or a build must never wait on an API that is slow or does not answer. A refused
 // connection fails at once, but a host that silently drops packets would otherwise stall.
-const API_TIMEOUT_MS = 4_000;
+const API_TIMEOUT_MS = 8_000;
 
 function isProduct(value: unknown): value is Product {
   if (!value || typeof value !== "object") return false;

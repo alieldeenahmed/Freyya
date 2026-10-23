@@ -48,7 +48,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${cormorant.variable} ${manrope.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* data-catalog says where the products came from: the API, or the bundled snapshot. */}
+      <body className="min-h-full flex flex-col" data-catalog={live ? "live" : "snapshot"}>
         <CatalogProvider products={catalog} live={live}>
           <CartProvider>
             <SmoothScrollProvider>

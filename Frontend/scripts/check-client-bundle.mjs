@@ -18,7 +18,17 @@ if (!existsSync(staticDir)) {
 
 // Settings that only the server may know. If one is set for the build, its value must not
 // appear in anything sent to a browser. (NEXT_PUBLIC_* values are meant to be public.)
-const SERVER_ONLY = ["API_URL", "DATABASE_URL", "TEST_DATABASE_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD_HASH", "ADMIN_SESSION_HOURS"];
+const SERVER_ONLY = [
+  "API_URL",
+  "DATABASE_URL",
+  "DATABASE_URL_UNPOOLED",
+  "TEST_DATABASE_URL",
+  "ADMIN_EMAIL",
+  "ADMIN_PASSWORD_HASH",
+  "ADMIN_SESSION_HOURS",
+  "CRON_SECRET",
+  "PROXY_SECRET",
+];
 
 // Shapes that are never fine in a browser file, whatever their value.
 const SHAPES = [

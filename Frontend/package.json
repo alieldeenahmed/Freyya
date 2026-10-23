@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "node e2e/run.mjs",
     "perf": "node scripts/bundle-report.mjs",
-    "check:bundle": "node scripts/check-client-bundle.mjs"
+    "check:bundle": "node scripts/check-client-bundle.mjs",
+    "test:live": "playwright test --config playwright.live.config.ts"
   },
   "dependencies": {
     "gsap": "^3.15.0",

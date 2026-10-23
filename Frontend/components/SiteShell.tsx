@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import CartDrawer from "@/components/CartDrawer";
 import CartNotice from "@/components/CartNotice";
+import DemoBanner from "@/components/DemoBanner";
 
 interface SiteShellProps {
   header: ReactNode;
@@ -19,6 +20,7 @@ export default function SiteShell({ header, footer, children }: SiteShellProps) 
   if (isAdmin) {
     return (
       <div id="site-content" className="flex flex-1 flex-col">
+        <DemoBanner />
         <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
           {children}
         </main>
@@ -36,6 +38,7 @@ export default function SiteShell({ header, footer, children }: SiteShellProps) 
         >
           Skip to content
         </a>
+        <DemoBanner />
         {header}
         <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
           {children}

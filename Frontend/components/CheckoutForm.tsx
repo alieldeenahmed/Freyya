@@ -23,6 +23,7 @@ import {
   saveOrder,
   type ShippingId,
 } from "@/lib/orders";
+import { DEMO_MODE } from "@/lib/demo";
 import { useHydrated } from "@/lib/useHydrated";
 
 type Errors = Partial<Record<keyof Fields, string>>;
@@ -201,6 +202,12 @@ export default function CheckoutForm() {
 
           <section>
             <SectionHeading number="02" title="Delivery" />
+            {DEMO_MODE && (
+              <p data-demo-helper className="mt-4 text-xs leading-relaxed text-text/70">
+                This is a demo, so please use made-up details. Nothing is sent anywhere, and no card is
+                needed.
+              </p>
+            )}
             <div className="mt-6 space-y-6">
               <Field id="checkout-name" label="Full name" error={errors.name}>
                 <input {...input("name", { autoComplete: "name" })} />
