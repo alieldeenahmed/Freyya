@@ -44,12 +44,18 @@ jobs:
           DATABASE_URL: postgresql://sentinel:sentinelpass@sentinel-db.example/freyya
           ADMIN_EMAIL: sentinel-admin@example.com
           ADMIN_PASSWORD_HASH: scrypt$0123456789abcdef$0123456789abcdef0123456789abcdef
+          CRON_SECRET: sentinel-cron-secret-0123456789
+          PROXY_SECRET: sentinel-proxy-secret-0123456789
+          DATABASE_URL_UNPOOLED: postgresql://sentinel:sentinelpass@sentinel-db-direct.example/freyya
       - run: npm run check:bundle
         env:
           API_URL: http://sentinel-api.example:4999
           DATABASE_URL: postgresql://sentinel:sentinelpass@sentinel-db.example/freyya
           ADMIN_EMAIL: sentinel-admin@example.com
           ADMIN_PASSWORD_HASH: scrypt$0123456789abcdef$0123456789abcdef0123456789abcdef
+          CRON_SECRET: sentinel-cron-secret-0123456789
+          PROXY_SECRET: sentinel-proxy-secret-0123456789
+          DATABASE_URL_UNPOOLED: postgresql://sentinel:sentinelpass@sentinel-db-direct.example/freyya
       # Fails if a page's JavaScript has grown past its budget in perf-budget.json.
       - run: npm run perf
 

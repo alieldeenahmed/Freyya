@@ -1,0 +1,36 @@
+name: Migrate the demo database
+
+# Migrations never run as part of a Vercel build. Run this by hand after merging a change that
+# adds one. It uses the direct (unpooled) connection, because a schema change needs a real session.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ github.repository == 'alieldeenahmed/Freyya' }}
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+      - run: npm ci
+      - name: Apply the migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+        run: |
+          if [ -z "$DATABASE_URL_UNPOOLED" ]; then
+            echo "DATABASE_URL_UNPOOLED is not set. See docs/DEPLOYMENT.md."
+            exit 1
+          fi
+          npm run db:migrate
