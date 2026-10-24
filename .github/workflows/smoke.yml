@@ -25,7 +25,7 @@ jobs:
       ${{ github.repository == 'alieldeenahmed/Freyya' &&
           (github.event_name == 'workflow_dispatch' ||
            (github.event.deployment_status.state == 'success' &&
-            github.event.deployment.environment == 'Production')) }}
+            startsWith(github.event.deployment.environment, 'Production'))) }}
     defaults:
       run:
         working-directory: Frontend
