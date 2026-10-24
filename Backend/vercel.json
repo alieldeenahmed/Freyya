@@ -1,6 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["fra1"],
-  "crons": [{ "path": "/internal/sweep-reservations", "schedule": "0 4 * * *" }],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+  "regions": [
+    "fra1"
+  ],
+  "crons": [
+    {
+      "path": "/internal/sweep-reservations",
+      "schedule": "0 4 * * *"
+    }
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "installCommand": "npm ci --include=dev"
 }
