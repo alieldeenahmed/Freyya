@@ -7,6 +7,8 @@ import { defineConfig, devices } from "@playwright/test";
 //   LIVE_URL=https://freyya.vercel.app npm run test:live
 //
 // To also test signing in to the admin, set DEMO_ADMIN_EMAIL and DEMO_ADMIN_PASSWORD.
+// A preview deployment sits behind Vercel deployment protection; LIVE_BYPASS_TOKEN is that
+// project's protection bypass token, sent with every request.
 const baseURL = (process.env.LIVE_URL ?? "https://freyya.vercel.app").replace(/\/$/, "");
 
 export default defineConfig({
@@ -19,6 +21,9 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL,
+    extraHTTPHeaders: process.env.LIVE_BYPASS_TOKEN
+      ? { "x-vercel-protection-bypass": process.env.LIVE_BYPASS_TOKEN }
+      : {},
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     // A site that has been quiet can need a few seconds to wake its API and database.
