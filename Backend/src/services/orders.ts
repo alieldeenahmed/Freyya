@@ -1,4 +1,5 @@
-import { and, eq, inArray, lt } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import type { Config } from "../config.js";
 import type { Db, Tx } from "../db/client.js";
 import { orderItems, orders, products, skus, type ShippingId } from "../db/schema.js";
@@ -9,6 +10,9 @@ import { HttpError, notFound } from "../errors.js";
 import { toOrderView, type OrderView } from "../views.js";
 import { applyStockChange } from "./inventory.js";
 import type { PaymentProvider } from "./payments.js";
+import { expiredHoldExists, releaseExpiredFor } from "./reservations.js";
+
+export { expireReservations } from "./reservations.js";
 
 type Executor = Db | Tx;
 
@@ -82,17 +86,26 @@ export async function createOrder(
     if (existing) return { order: existing, created: false };
   }
 
-  // Stock held for an unpaid order that has run out of time still counts as taken until the
-  // periodic sweep gets to it. Free it now, so a buyer is never turned away because of it.
-  // Best effort: if it fails, the stock check below is still correct, just less generous.
-  await expireReservations(db).catch(() => 0);
-
-  for (let attempt = 0; attempt < 5; attempt++) {
+  let waits = 0;
+  for (let attempt = 0; attempt < 5 + MAX_WAITS; attempt++) {
     try {
-      const id = await db.transaction((tx) =>
+      const outcome = await db.transaction((tx) =>
         placeOrder(tx, config, input, idempotencyKey, fingerprint)
       );
-      const order = await loadOrder(db, id);
+      // Someone else was in the middle of giving back an expired hold on these items, so the
+      // stock is about to come back. Wait a moment and look again instead of turning the buyer away.
+      if ("retry" in outcome) {
+        if (waits++ < MAX_WAITS) {
+          await new Promise((resolve) => setTimeout(resolve, 60 * waits));
+          continue;
+        }
+        throw outcome.refusal;
+      }
+      // A refusal is thrown only after the transaction has committed, so the expired holds it
+      // released on the way are kept even though this order could not be placed.
+      if ("refusal" in outcome) throw outcome.refusal;
+
+      const order = await loadOrder(db, outcome.id);
       if (!order) throw new Error("Order vanished after creation");
       return { order, created: true };
     } catch (error) {
@@ -111,19 +124,48 @@ export async function createOrder(
   throw new HttpError(500, "order_id_exhausted", "Could not allocate an order number");
 }
 
+const MAX_WAITS = 4;
+
+type Placed = { id: string } | { refusal: HttpError } | { retry: true; refusal: HttpError };
+
 async function placeOrder(
   tx: Tx,
   config: Config,
   input: OrderInput,
   idempotencyKey: string | undefined,
   fingerprint: string
-): Promise<string> {
+): Promise<Placed> {
   // The same item twice becomes one line.
   const quantities = new Map<string, number>();
   for (const line of input.items) {
     quantities.set(line.skuId, (quantities.get(line.skuId) ?? 0) + line.quantity);
   }
   const skuIds = [...quantities.keys()].sort();
+
+  // In the public demo, one lock serialises the count below, so the cap on unpaid orders is
+  // exact. It is released when the transaction ends, and nothing else takes it.
+  if (config.DEMO_MODE) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('freyya-demo-orders'))`);
+  }
+
+  // Give back the stock of any hold on these items that has run out, so a buyer is never
+  // turned away because of an order nobody paid for. Its locks come first and never wait.
+  await releaseExpiredFor(tx, skuIds);
+
+  if (config.DEMO_MODE) {
+    const [pending] = await tx.execute<{ n: number }>(
+      sql`select count(*)::int as n from orders where status = 'pending_payment'`
+    ).then((result) => result.rows);
+    if ((pending?.n ?? 0) >= config.DEMO_MAX_PENDING_ORDERS) {
+      return {
+        refusal: new HttpError(
+          429,
+          "demo_capacity",
+          "The demo is busy right now: too many orders are waiting for payment. Please try again in a minute."
+        ),
+      };
+    }
+  }
 
   // Locking in a fixed order means two orders that share items can't deadlock.
   const rows = await tx
@@ -138,9 +180,11 @@ async function placeOrder(
 
   const unknown = skuIds.filter((id) => !found.get(id)?.product.active);
   if (unknown.length > 0) {
-    throw new HttpError(422, "unknown_item", "Some items are not available.", {
-      skuIds: unknown,
-    });
+    return {
+      refusal: new HttpError(422, "unknown_item", "Some items are not available.", {
+        skuIds: unknown,
+      }),
+    };
   }
 
   const short = skuIds
@@ -151,9 +195,12 @@ async function placeOrder(
     }))
     .filter((line) => line.requested > line.available);
   if (short.length > 0) {
-    throw new HttpError(409, "insufficient_stock", "Not enough stock for some items.", {
+    const refusal = new HttpError(409, "insufficient_stock", "Not enough stock for some items.", {
       items: short,
     });
+    // If an expired hold on these items is still there, another caller has it locked and is
+    // releasing it right now (we never wait for an order lock while holding item locks).
+    return (await expiredHoldExists(tx, skuIds)) ? { retry: true, refusal } : { refusal };
   }
 
   // Prices come from the database. Whatever the client believes is ignored.
@@ -168,7 +215,6 @@ async function placeOrder(
   const totals = computeTotals(subtotalCents, input.shippingId);
 
   const orderId = generateOrderId();
-  const reservedUntil = new Date(Date.now() + config.RESERVATION_MINUTES * 60_000);
 
   await tx.insert(orders).values({
     id: orderId,
@@ -186,7 +232,8 @@ async function placeOrder(
     shippingCents: totals.shippingCents,
     totalCents: totals.totalCents,
     status: "pending_payment",
-    reservedUntil,
+    // The hold is measured by the database clock, like every other time in the system.
+    reservedUntil: sql`now() + make_interval(mins => ${config.RESERVATION_MINUTES}::int)`,
   });
 
   await tx.insert(orderItems).values(
@@ -216,12 +263,21 @@ async function placeOrder(
     }
   }
 
-  return orderId;
+  return { id: orderId };
 }
 
+// Locks an order and says, by the database clock, whether its hold has run out.
 async function lockOrder(tx: Tx, id: string) {
-  const [order] = await tx.select().from(orders).where(eq(orders.id, id)).for("update").limit(1);
-  return order;
+  const [row] = await tx
+    .select({
+      order: orders,
+      expired: sql<boolean>`coalesce(${orders.reservedUntil} <= now(), false)`,
+    })
+    .from(orders)
+    .where(eq(orders.id, id))
+    .for("update")
+    .limit(1);
+  return row;
 }
 
 // Puts the stock back and closes the order. The caller holds the order's row lock.
@@ -251,9 +307,9 @@ export async function cancelLockedOrder(
     .update(orders)
     .set({
       status: "cancelled",
-      cancelledAt: new Date(),
+      cancelledAt: sql`now()`,
       reservedUntil: null,
-      updatedAt: new Date(),
+      updatedAt: sql`now()`,
     })
     .where(eq(orders.id, orderId));
 }
@@ -275,8 +331,9 @@ export async function payOrder(
   email: string
 ): Promise<OrderView> {
   const outcome = await db.transaction(async (tx) => {
-    const order = await lockOrder(tx, id);
-    if (!order || !sameEmail(order.email, email)) throw notFound("Order not found");
+    const locked = await lockOrder(tx, id);
+    const order = locked?.order;
+    if (!locked || !order || !sameEmail(order.email, email)) throw notFound("Order not found");
 
     if (order.status === "paid" || order.status === "shipped" || order.status === "delivered") {
       return "already_paid" as const;
@@ -285,7 +342,7 @@ export async function payOrder(
       throw new HttpError(409, "order_closed", "This order can no longer be paid.");
     }
 
-    if (order.reservedUntil && order.reservedUntil.getTime() <= Date.now()) {
+    if (locked.expired) {
       await cancelLockedOrder(tx, id, { actor: "system", note: "Reservation expired" });
       return "expired" as const;
     }
@@ -301,9 +358,9 @@ export async function payOrder(
       .set({
         status: "paid",
         paymentRef: reference,
-        paidAt: new Date(),
+        paidAt: sql`now()`,
         reservedUntil: null,
-        updatedAt: new Date(),
+        updatedAt: sql`now()`,
       })
       .where(eq(orders.id, id));
 
@@ -322,23 +379,4 @@ export async function payOrder(
   const paid = await loadOrder(db, id);
   if (!paid) throw notFound("Order not found");
   return paid;
-}
-
-// Cancels unpaid orders whose hold has run out, returning their stock.
-export async function expireReservations(db: Db, now = new Date()): Promise<number> {
-  const stale = await db
-    .select({ id: orders.id })
-    .from(orders)
-    .where(and(eq(orders.status, "pending_payment"), lt(orders.reservedUntil, now)));
-
-  let released = 0;
-  for (const { id } of stale) {
-    await db.transaction(async (tx) => {
-      const order = await lockOrder(tx, id);
-      if (!order || order.status !== "pending_payment") return;
-      await cancelLockedOrder(tx, id, { actor: "system", note: "Reservation expired" });
-      released += 1;
-    });
-  }
-  return released;
 }

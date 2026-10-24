@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { serializeRequest } from "../src/app.js";
+import { serializeRequest } from "../src/create-app.js";
 import { loadConfig } from "../src/config.js";
 import { adminSessions } from "../src/db/schema.js";
 import {
@@ -35,6 +35,10 @@ const OPEN_ROUTES = [
   "POST /orders/:id/pay",
   "POST /admin/login",
   "POST /admin/logout",
+  // Scheduled jobs. Open to sessions, but each one needs the shared CRON_SECRET (see serverless.test.ts).
+  "GET /internal/sweep-reservations",
+  "POST /internal/sweep-reservations",
+  "POST /internal/demo-reset",
   // Answers the browser's preflight check. The CORS plugin owns it.
   "OPTIONS *",
 ];
@@ -66,6 +70,18 @@ describe("who can reach what", () => {
         });
         expect(res.statusCode, `${method} ${url}`).toBe(401);
         expect(res.json().error.code).toBe("unauthorized");
+      }
+    }
+  });
+
+  it("asks every scheduled job for the secret, before it does anything", async () => {
+    const jobs = ctx.app.routeTable.filter((r) => r.url.startsWith("/internal"));
+    expect(jobs.length).toBeGreaterThanOrEqual(3);
+    for (const { method, url } of jobs) {
+      for (const headers of [{}, { authorization: "Bearer nope-nope-nope-nope-nope" }]) {
+        const res = await ctx.app.inject({ method: method as "GET", url, headers });
+        // With no CRON_SECRET configured the job is off (503); with one, a wrong secret is a 401.
+        expect([401, 503], `${method} ${url}`).toContain(res.statusCode);
       }
     }
   });
@@ -206,6 +222,7 @@ describe("what sign-in accepts", () => {
 
   it("slows a guesser down with a limit on attempts, and says how long to wait", async () => {
     const limited = await createTestContext({}, { rateLimit: true });
+    await limited.reset();
     try {
       const attempt = () =>
         limited.app.inject({ method: "POST", url: "/admin/login", payload: { email: ADMIN_EMAIL, password: "nope" } });
@@ -278,6 +295,7 @@ describe("what other people's orders and admin data are protected by", () => {
 
   it("limits how fast order numbers can be tried", async () => {
     const limited = await createTestContext({}, { rateLimit: true });
+    await limited.reset();
     try {
       const results = [];
       for (let i = 0; i < 32; i++) {
@@ -302,7 +320,7 @@ describe("what the public endpoints reveal about the server", () => {
   it("shares shipping rules and nothing from the environment", async () => {
     const config = (await ctx.app.inject({ method: "GET", url: "/config" })).json();
     expect(Object.keys(config).sort()).toEqual(
-      ["countries", "currency", "freeShippingThreshold", "reservationMinutes", "shippingMethods"].sort()
+      ["countries", "currency", "demo", "freeShippingThreshold", "reservationMinutes", "shippingMethods"].sort()
     );
 
     const body = JSON.stringify([

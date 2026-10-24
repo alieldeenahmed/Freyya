@@ -17,7 +17,7 @@ interface StockChange {
 export async function applyStockChange(tx: Tx, change: StockChange): Promise<number | null> {
   const [row] = await tx
     .update(skus)
-    .set({ stock: sql`${skus.stock} + ${change.delta}`, updatedAt: new Date() })
+    .set({ stock: sql`${skus.stock} + ${change.delta}`, updatedAt: sql`now()` })
     .where(
       change.delta < 0
         ? and(eq(skus.id, change.skuId), gte(skus.stock, -change.delta))

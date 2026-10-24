@@ -9,3 +9,9 @@ coverage
 
 *.log
 *.tsbuildinfo
+
+# vercel
+.vercel
+
+.vercel
+.env*

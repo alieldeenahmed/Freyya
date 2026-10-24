@@ -1,0 +1,37 @@
+name: Reset the demo
+
+# Puts the public demo back to its launch state every night: the six products at launch stock,
+# a few fake orders for the admin to look at, and nothing left from the day. The API refuses to do
+# this unless DEMO_MODE is on and the database carries the demo marker, so it cannot touch
+# anything else even if it is pointed at it by mistake.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: demo-reset
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ github.repository == 'alieldeenahmed/Freyya' }}
+    steps:
+      - name: Call the reset
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$API_BASE_URL" ]; then
+            echo "CRON_SECRET and API_BASE_URL are not set. See docs/DEPLOYMENT.md."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-delay 10 --retry-all-errors --max-time 120 \
+            -X POST -H "Authorization: Bearer $CRON_SECRET" \
+            "$API_BASE_URL/internal/demo-reset"
+          echo

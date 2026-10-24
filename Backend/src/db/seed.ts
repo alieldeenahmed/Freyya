@@ -2,7 +2,8 @@ import { loadConfig } from "../config.js";
 import { createDb } from "./client.js";
 import { seedCatalog } from "./seed-catalog.js";
 
-const { db, pool } = createDb(loadConfig().DATABASE_URL);
+const config = loadConfig();
+const { db, pool } = createDb(config.DATABASE_URL_UNPOOLED ?? config.DATABASE_URL, { max: 1 });
 
 try {
   await seedCatalog(db);

@@ -1,0 +1,40 @@
+name: Release expired stock holds
+
+# An unpaid order holds stock for a while. The API also gives it back when an order is placed and
+# when the catalog is read, so this only makes sure it happens on a quiet shop too.
+#
+# GitHub starts scheduled runs on a best-effort basis, so a run can be late, and it switches
+# schedules off for a repository with no activity for 60 days. Vercel's own daily cron, set in
+# Backend/vercel.json, is the backstop, and a manual run from the Actions tab always works.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    # Forks have no secrets, and should not try.
+    if: ${{ github.repository == 'alieldeenahmed/Freyya' }}
+    steps:
+      - name: Call the sweep
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$API_BASE_URL" ]; then
+            echo "CRON_SECRET and API_BASE_URL are not set. See docs/DEPLOYMENT.md."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-delay 5 --retry-all-errors --max-time 60 \
+            -X POST -H "Authorization: Bearer $CRON_SECRET" \
+            "$API_BASE_URL/internal/sweep-reservations"
+          echo

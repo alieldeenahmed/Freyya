@@ -96,6 +96,15 @@ interface StockDetails {
   items?: { skuId: string; requested: number; available: number }[];
 }
 
+// The API says how long to wait ("Try again in 53 seconds."). Say it the way a person would.
+function waitAdvice(message: string): string {
+  const seconds = Number(/in (\d+) seconds?/.exec(message)?.[1]);
+  if (!Number.isFinite(seconds) || seconds <= 0) return "Please wait a minute and try again.";
+  if (seconds < 90) return "Please wait a minute and try again.";
+  const minutes = Math.ceil(seconds / 60);
+  return minutes >= 60 ? "Please try again in about an hour." : `Please try again in about ${minutes} minutes.`;
+}
+
 // Turns whatever went wrong into something the shopper can act on.
 export function describeCheckoutError(
   error: unknown,
@@ -191,8 +200,14 @@ export function describeCheckoutError(
     };
   }
 
+  // The public demo is full of unpaid orders for the moment. Nothing is wrong with this order,
+  // and sending it again, with the same key, is the right thing to do once there is room.
+  if (error.code === "demo_capacity") {
+    return { ...problem, message: error.message };
+  }
+
   if (error.status === 429 || error.code === "rate_limited") {
-    return { ...problem, message: "Too many attempts. Please wait a minute and try again." };
+    return { ...problem, message: `Too many attempts. ${waitAdvice(error.message)}` };
   }
 
   // The order can't proceed as it stands, for example its stock hold ran out.

@@ -1,5 +1,5 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { eq, lt } from "drizzle-orm";
+import { and, eq, gt, lte, sql } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { adminSessions } from "../db/schema.js";
 
@@ -32,24 +32,30 @@ const sha256 = (value: string) => createHash("sha256").update(value).digest("hex
 
 export async function createSession(db: Db, email: string, hours: number) {
   const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + hours * 3_600_000);
 
-  await db.insert(adminSessions).values({ id: sha256(token), email, expiresAt });
+  // Expiry is the database's clock plus the session length, and so is every later check.
+  const [session] = await db
+    .insert(adminSessions)
+    .values({
+      id: sha256(token),
+      email,
+      expiresAt: sql`now() + make_interval(hours => ${hours}::int)`,
+    })
+    .returning({ expiresAt: adminSessions.expiresAt });
   // Old sessions are cleared as new ones are made, so there is no separate clean-up job.
-  await db.delete(adminSessions).where(lt(adminSessions.expiresAt, new Date()));
+  await db.delete(adminSessions).where(lte(adminSessions.expiresAt, sql`now()`));
 
-  return { token, expiresAt };
+  return { token, expiresAt: session!.expiresAt };
 }
 
 export async function findSession(db: Db, token: string): Promise<{ email: string } | null> {
   const [session] = await db
-    .select()
+    .select({ email: adminSessions.email })
     .from(adminSessions)
-    .where(eq(adminSessions.id, sha256(token)))
+    .where(and(eq(adminSessions.id, sha256(token)), gt(adminSessions.expiresAt, sql`now()`)))
     .limit(1);
 
-  if (!session || session.expiresAt.getTime() <= Date.now()) return null;
-  return { email: session.email };
+  return session ? { email: session.email } : null;
 }
 
 export async function deleteSession(db: Db, token: string) {

@@ -24,6 +24,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "../services/auth.js";
+import { limitByAddress } from "../services/rate-limit.js";
 
 const COOKIE = "freyya_admin";
 
@@ -54,7 +55,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/login",
-    { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } },
+    { preHandler: limitByAddress(db, app.ctx.rateLimit, { name: "admin-login", max: 5, windowSeconds: 60 }) },
     async (request, reply: FastifyReply) => {
       checkOrigin(request);
 
