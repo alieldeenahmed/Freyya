@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { buildApp } from "../src/app.js";
+import { buildApp } from "../src/create-app.js";
 import { loadConfig, type Config } from "../src/config.js";
 import { createDb, type Db } from "../src/db/client.js";
 import { seedCatalog } from "../src/db/seed-catalog.js";

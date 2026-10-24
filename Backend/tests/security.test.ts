@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { serializeRequest } from "../src/app.js";
+import { serializeRequest } from "../src/create-app.js";
 import { loadConfig } from "../src/config.js";
 import { adminSessions } from "../src/db/schema.js";
 import {
