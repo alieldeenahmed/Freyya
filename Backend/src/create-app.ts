@@ -63,14 +63,15 @@ export function fastifyOptions(config: Config, logger = false) {
 
 export async function buildApp(options: BuildOptions): Promise<FastifyInstance> {
   const app = Fastify(fastifyOptions(options.config, options.logger));
-  return configureApp(app, options);
+  configureApp(app, options);
+  await app.ready();
+  return app;
 }
 
-// Adds everything to an instance that already exists.
-export async function configureApp(
-  app: FastifyInstance,
-  options: BuildOptions
-): Promise<FastifyInstance> {
+// Adds everything to an instance that already exists. This is deliberately not async: Vercel only
+// picks the server up if listen() is called while the entrypoint is still loading, so nothing
+// can be awaited before it. Fastify queues the plugins and loads them in order on listen().
+export function configureApp(app: FastifyInstance, options: BuildOptions): FastifyInstance {
   const { config, db } = options;
 
   app.decorate("ctx", {
@@ -88,18 +89,18 @@ export async function configureApp(
     }
   });
 
-  await app.register(helmet);
-  await app.register(cors, {
+  app.register(helmet);
+  app.register(cors, {
     origin: corsOrigins(config),
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   });
-  await app.register(cookie);
+  app.register(cookie);
   // A generous ceiling for everything; the sensitive routes set tighter limits of their own.
   if (options.rateLimit !== false) {
     // This one is kept in memory, per instance, as a coarse guard against floods. The limits that
     // matter (sign-in, orders, payment) are counted in the database, shared by every instance.
-    await app.register(rateLimit, {
+    app.register(rateLimit, {
       global: true,
       max: 300,
       timeWindow: "1 minute",
@@ -160,9 +161,9 @@ export async function configureApp(
     reply.status(404).send({ error: { code: "not_found", message: "Not found" } });
   });
 
-  await app.register(publicRoutes);
-  await app.register(adminRoutes, { prefix: "/admin" });
-  await app.register(internalRoutes, { prefix: "/internal" });
+  app.register(publicRoutes);
+  app.register(adminRoutes, { prefix: "/admin" });
+  app.register(internalRoutes, { prefix: "/internal" });
 
   return app;
 }
