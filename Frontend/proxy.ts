@@ -9,12 +9,19 @@ import { NextResponse, type NextRequest } from "next/server";
 // storefront received it, is passed along in X-Freyya-Client-Ip, together with a secret the
 // API checks. Without the secret the API ignores the header, so no one can name their own address.
 //
-// With no PROXY_SECRET set (local development, previews) nothing is added and requests pass untouched.
+// With no PROXY_SECRET set (local development) nothing is added and requests pass untouched.
+//
+// Preview deployments of the API sit behind Vercel's deployment protection, which only lets a
+// request through that carries the project's bypass token. API_BYPASS_TOKEN holds it for the
+// previews of this storefront. It is never set for production, where the API is public.
 export function proxy(request: NextRequest) {
   const secret = process.env.PROXY_SECRET;
   if (!secret) return NextResponse.next();
 
   const headers = new Headers(request.headers);
+  headers.delete("x-vercel-protection-bypass");
+  const bypass = process.env.API_BYPASS_TOKEN;
+  if (bypass) headers.set("x-vercel-protection-bypass", bypass);
   // Whatever the visitor sent under these names is theirs to forge, so it is dropped first.
   headers.delete("x-freyya-client-ip");
   headers.delete("x-freyya-proxy-secret");

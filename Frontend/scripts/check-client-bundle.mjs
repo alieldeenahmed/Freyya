@@ -28,6 +28,7 @@ const SERVER_ONLY = [
   "ADMIN_SESSION_HOURS",
   "CRON_SECRET",
   "PROXY_SECRET",
+  "API_BYPASS_TOKEN",
 ];
 
 // Shapes that are never fine in a browser file, whatever their value.

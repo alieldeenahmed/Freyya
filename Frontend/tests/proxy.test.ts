@@ -67,3 +67,18 @@ describe("passing the visitor's address to the API", () => {
     }
   });
 });
+
+describe("reaching a protected preview of the API", () => {
+  it("sends the bypass token when one is configured", () => {
+    vi.stubEnv("PROXY_SECRET", "a-shared-secret-of-enough-length");
+    vi.stubEnv("API_BYPASS_TOKEN", "preview-bypass-token");
+    expect(forwarded(call({ "x-forwarded-for": "203.0.113.7" }))["x-vercel-protection-bypass"]).toBe("preview-bypass-token");
+  });
+
+  it("sends none otherwise, and ignores one a visitor supplies", () => {
+    vi.stubEnv("PROXY_SECRET", "a-shared-secret-of-enough-length");
+    vi.stubEnv("API_BYPASS_TOKEN", "");
+    const headers = forwarded(call({ "x-forwarded-for": "203.0.113.7", "x-vercel-protection-bypass": "forged" }));
+    expect(headers["x-vercel-protection-bypass"]).toBeUndefined();
+  });
+});
