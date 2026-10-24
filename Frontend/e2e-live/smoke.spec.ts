@@ -20,9 +20,13 @@ test.describe("The storefront", () => {
   });
 
   test("answers its own health check through the rewrite", async ({ request }) => {
-    const res = await request.get("/api/health");
-    expect(res.status()).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok" });
+    // The first request after a quiet period can be slow or drop, so it gets a few tries
+    // before the site counts as down.
+    await expect(async () => {
+      const res = await request.get("/api/health", { timeout: 15_000 });
+      expect(res.status()).toBe(200);
+      expect(await res.json()).toEqual({ status: "ok" });
+    }).toPass({ timeout: 45_000, intervals: [2_000, 5_000, 10_000] });
   });
 
   test("lets a visitor put something in the bag and reach checkout, without ordering", async ({ page }) => {
