@@ -168,7 +168,7 @@ sequenceDiagram
 
 ## Testing
 
-Three layers, all run in CI on every push and pull request: **263 storefront tests** (Vitest/Testing Library), **304 API tests** (Vitest, against a real Postgres database), and **@@E2E@@ end-to-end tests** (Playwright, desktop and mobile viewports, against a production build and the real API). A fourth, read-only Playwright project (`Frontend/e2e-live`) checks the deployed demo and runs after every production deployment.
+Three layers, all run in CI on every push and pull request: **263 storefront tests** (Vitest/Testing Library), **304 API tests** (Vitest, against a real Postgres database), and **111 end-to-end tests** (Playwright, desktop and mobile viewports, against a production build and the real API). A fourth, read-only Playwright project (`Frontend/e2e-live`) checks the deployed demo and runs after every production deployment.
 
 The API test suite is organized around correctness, not just coverage:
 
