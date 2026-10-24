@@ -4,16 +4,25 @@ A full-stack e-commerce platform (Next.js frontend, Fastify/PostgreSQL backend) 
 
 ## Live Demo
 
-**[freyya.vercel.app](https://freyya.vercel.app/)**
+**Storefront: [freyya.vercel.app](https://freyya.vercel.app/)** · **API: [freyya-api.vercel.app](https://freyya-api.vercel.app/health)** (`/health`)
 
-The link is the storefront only. **The backend API is not deployed there.** What that means concretely:
+The whole stack is deployed, not just the storefront: the Next.js storefront and the Fastify API run as two Vercel projects, on a Neon Postgres database that is used for nothing else. You can browse, check out with simulated payment, and sign in to the admin dashboard.
 
-| Works on the live demo | Needs a local run |
+**Admin sign-in** at [freyya.vercel.app/admin](https://freyya.vercel.app/admin). These credentials belong to the demo only and are published on purpose:
+
+| | |
 | --- | --- |
-| Browsing the catalog, product pages, the shade-matching quiz, the cart, and the content pages | Placing an order (checkout is disabled with an explicit message) |
-| — | Signing in to `/admin` and using the order/inventory dashboard |
+| Email | `admin@demo.freyya.example` |
+| Password | `ulKia9jzNW88rr4uyOGS` |
 
-With no API reachable, the frontend falls back to a generated static snapshot of the catalog so the site stays browsable — it does not silently fail. This is a deliberate constraint of hosting a Postgres-backed API for free, not an oversight; see [Limitations](#limitations). Run the full stack locally (see [Getting Started](#getting-started)) to exercise checkout and the admin dashboard. The admin screenshots below are from a local run.
+It is a public demo, so keep these in mind:
+
+- **Everything resets every night** (03:00 UTC): orders, stock, sessions. Other visitors share the same data and may change it while you look.
+- **Use made-up details at checkout.** Payment is simulated and nothing is shipped or emailed, but orders are real rows in a real database.
+- **There are caps against abuse:** at most 6 orders an hour per address, and at most 8 unpaid orders at once, so the twelve items cannot all be held in one burst. Rate limits are shared across all server instances.
+- **The first request after a quiet spell is slower** (free tier).
+
+How it is put together, including the free-tier limits, is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). If the API is ever unreachable, the storefront falls back to a generated static snapshot of the catalog so pages stay browsable, and checkout says plainly that it cannot place orders.
 
 ## Overview
 
@@ -96,19 +105,23 @@ Further concurrency tests in `Backend/tests/concurrency.test.ts` cover cases pas
 
 All of these run against a real PostgreSQL database (a disposable Neon branch), not mocks — the property being tested (row locks under contention) doesn't exist in an in-memory fake.
 
+The main scenario has also been run against the deployed API on Vercel, through pooled Neon connections: 10 concurrent orders for an item with 3 in stock gave exactly 3 `201` and 7 `409`, the stock ledger still summed to the stock afterwards, and a repeated idempotency key returned the original order with `200` while the same key with a different cart was refused with `422`.
+
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Browser -->|"/api/* same-origin"| Next["Next.js (App Router)\nrewrites /api/* to the API"]
-  Next -->|"HTTP"| API["Fastify API"]
-  API -->|"SELECT ... FOR UPDATE\nin one transaction"| DB[("PostgreSQL")]
-  Next -.->|"API unreachable"| Snapshot["generated catalog snapshot\n(static fallback)"]
+  Browser -->|"/api/* same-origin"| Web["Storefront on Vercel\nNext.js, rewrites /api/*"]
+  Web -->|"visitor address + shared secret"| API["API on Vercel\nFastify"]
+  API -->|"pooled connection\nSELECT ... FOR UPDATE in one transaction"| DB[("Neon Postgres")]
+  GH["GitHub Actions\nsweep every 5 min, reset nightly"] -->|"Bearer secret"| API
+  Web -.->|"API unreachable"| Snapshot["generated catalog snapshot\n(static fallback)"]
 ```
 
 - The browser never calls the API directly. It calls `/api/*` on the storefront's own origin, and `next.config.ts` rewrites those requests server-side to the API's address. This keeps the admin session cookie same-origin without exposing the API's address to the browser.
 - The API is the single source of truth for price, stock and order state. The frontend keeps a generated, versioned copy of the catalog and pricing rules (produced by a script from the API's own source data, checked in CI for staleness) purely as a static fallback for when the API isn't reachable — never as an alternative source of truth. Its own README documents the ownership rules in more detail.
 - The cart and last-order confirmation are the only application state kept client-side (`localStorage`), and both are treated as untrusted input, re-validated against the API on every use.
+- **The API is written to run serverless.** Nothing depends on a background process: expired stock holds are released when an order is placed, when the catalog is read, and by a scheduled call. Every time comparison uses the database clock, rate limits are counted in Postgres so all instances share them, and sessions are database rows. The storefront passes the visitor's address to the API, because the host would otherwise show the API only the storefront's own. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) lists each concern and how it is handled.
 
 **Checkout, end to end:**
 
@@ -132,20 +145,20 @@ sequenceDiagram
 | --- | --- |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, GSAP |
 | Backend | Fastify 5, TypeScript, Zod (request/environment validation) |
-| Database | PostgreSQL (developed against Neon), Drizzle ORM, SQL migrations |
+| Database | PostgreSQL on Neon (pooled connection at runtime), Drizzle ORM, SQL migrations |
 | Testing | Vitest, Testing Library, Playwright, axe-core |
-| CI | GitHub Actions (lint, type-check, unit/integration tests, build, end-to-end tests) |
-| Deployment | Vercel (storefront only — see [Live Demo](#live-demo)) |
+| CI and jobs | GitHub Actions: lint, type-check, unit/integration tests, build, end-to-end tests; plus the stock-hold sweep, the nightly demo reset and a smoke test of the live site |
+| Deployment | Vercel (two projects: storefront and API) and Neon. See [Live Demo](#live-demo) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 
 ## Screenshots
 
 | Shop | Product |
 | --- | --- |
-| ![Shop with filter and sort](Frontend/docs/screenshots/shop.png) | ![Product page with stock, shades and reviews](Frontend/docs/screenshots/product.png) |
+| ![Shop with filter and sort](docs/screenshots/shop.png) | ![Product page with stock, shades and reviews](docs/screenshots/product.png) |
 
-![Shade Match quiz](Frontend/docs/screenshots/quiz.png)
+![Shade Match quiz](docs/screenshots/quiz.png)
 
-**Admin dashboard** (local run, seeded demo data)
+**Admin dashboard** (the deployed demo, with its synthetic data)
 
 | Overview | Orders |
 | --- | --- |
@@ -155,7 +168,7 @@ sequenceDiagram
 
 ## Testing
 
-Three layers, all run in CI on every push and pull request: **243 storefront tests** (Vitest/Testing Library), **249 API tests** (Vitest, against a real Postgres database), and **111 end-to-end tests** (Playwright, desktop and mobile viewports, against a production build and the real API).
+Three layers, all run in CI on every push and pull request: **263 storefront tests** (Vitest/Testing Library), **304 API tests** (Vitest, against a real Postgres database), and **@@E2E@@ end-to-end tests** (Playwright, desktop and mobile viewports, against a production build and the real API). A fourth, read-only Playwright project (`Frontend/e2e-live`) checks the deployed demo and runs after every production deployment.
 
 The API test suite is organized around correctness, not just coverage:
 
@@ -164,6 +177,7 @@ The API test suite is organized around correctness, not just coverage:
 | `orders`, `pricing`, `catalog` | Order placement, pricing/shipping calculation, stock effects, one path at a time |
 | `concurrency` | Every race condition described above — overselling, idempotency-key races, reservation-expiry races, admin/buyer contention — checked against a real database, with the stock ledger reconciled after each |
 | `order-state-machine` | All 36 possible from→to status pairs, exercised through the real API, confirming exactly the allowed transitions succeed and every other one is rejected |
+| `serverless` | What running on a serverless host needs: stock holds that expire with no background process, time taken from the database, rate limits shared by every instance, the address a request is counted against, the origin check, the demo caps and the nightly reset (including the cases where it must refuse). Also a guard that stops the test runner from ever connecting to the demo database |
 | `security` | Every route is either explicitly public or requires a valid admin session (a test enumerates the route table so a newly added route can't be accidentally left open); cookie flags, origin checks, login rate-limiting, and rejection of malformed/hostile input |
 | `auth`, `admin` | Session lifecycle, password hashing, inventory adjustments, order transitions via the admin API |
 | `contract` | The frontend's generated catalog/pricing snapshot is byte-for-byte what the generator produces from the API's own source data — fails if the two have drifted |
@@ -173,6 +187,7 @@ On the frontend, the same discipline extends to the client: the cart's reconcili
 ```bash
 npm test          # storefront and API tests
 npm run test:e2e  # end-to-end tests (needs Backend/.env.test)
+LIVE_URL=https://freyya.vercel.app npm run test:live --prefix Frontend   # read-only checks of a deployed site
 ```
 
 ## Getting Started
@@ -239,14 +254,16 @@ Freyya/
 │   └── e2e/             Playwright end-to-end tests
 ├── Backend/              Fastify API
 │   ├── src/
+│   │   ├── create-app.ts Configures the Fastify app
+│   │   ├── server.ts     Entrypoint (local and Vercel)
 │   │   ├── routes/       HTTP route handlers
 │   │   ├── services/     Order placement, inventory, auth, admin logic
 │   │   ├── domain/       Pricing, order state machine, idempotency
 │   │   └── db/           Drizzle schema and seed data
 │   ├── drizzle/          SQL migrations
 │   └── tests/            Vitest tests, including concurrency and security
-├── .github/workflows/    CI (build, test, e2e on every push/PR)
-└── docs/                 Admin screenshots, accessibility and performance notes
+├── .github/workflows/    CI, the stock-hold sweep, the nightly demo reset, the smoke test
+└── docs/                 Deployment guide, screenshots, accessibility and performance notes
 ```
 
 ## Limitations
@@ -254,10 +271,10 @@ Freyya/
 Stated plainly, not hidden:
 
 - **Payment is simulated.** No real payment processor is integrated; no card data is collected, transmitted, or stored anywhere in the system.
-- **The live Vercel deployment is storefront-only.** The API is not deployed alongside it, so checkout and the admin dashboard are not usable on the public URL — see [Live Demo](#live-demo). Running the full stack locally is required to exercise them.
+- **The public demo is a shared, public sandbox.** Its admin login is published, all visitors see the same data, and it resets every night. It limits each address to 6 orders an hour and the whole demo to 8 unpaid orders at once. Visitors behind one shared address (an office, a mobile carrier) share those counters.
+- **It runs on free tiers.** The first request after a quiet period is slower. Vercel's free cron runs once a day, so the frequent stock-hold sweep is a GitHub Actions schedule, which can start late. Nothing relies on it for correctness (holds are also released when orders are placed and when the catalog is read), but a late sweep means an expired hold can linger until then. Runtime logs on the free plan are kept for about 30 minutes.
 - **Single admin account,** configured via environment variables. There is no multi-user admin identity system, and no customer accounts.
 - **The frontend keeps a generated copy of the catalog and pricing rules** as a static fallback for when the API is unreachable. It's produced from the API's own source data by a script and checked for staleness in CI, but it is still a second copy that has to be regenerated deliberately when the source changes.
-- **Reservation expiry is checked against the API process's own clock;** the current implementation doesn't account for clock skew across multiple API instances.
 - **No manual screen-reader testing has been performed.** Automated accessibility scans (axe) and accessibility-tree/focus assertions are part of the test suite, but they are not a substitute for a human pass with a screen reader.
 - **Admin password hashing** uses Node's `scrypt` at default cost parameters, which is adequate for a single rate-limited admin account but would need tuning for a broader deployment.
 

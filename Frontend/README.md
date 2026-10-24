@@ -6,7 +6,7 @@ Freyya is a storefront for a six-product skincare line. It is built with Next.js
 
 The catalog, orders and stock come from a separate API, in [`../Backend`](../Backend/README.md). This folder is the storefront and the admin dashboard.
 
-![Freyya home page](docs/screenshots/home.png)
+![Freyya home page](../docs/screenshots/home.png)
 
 ## What's in it
 
@@ -24,9 +24,9 @@ The catalog, orders and stock come from a separate API, in [`../Backend`](../Bac
 
 |  |  |
 | --- | --- |
-| ![Shop](docs/screenshots/shop.png) | ![Product page](docs/screenshots/product.png) |
+| ![Shop](../docs/screenshots/shop.png) | ![Product page](../docs/screenshots/product.png) |
 
-![Shade quiz](docs/screenshots/quiz.png)
+![Shade quiz](../docs/screenshots/quiz.png)
 
 ## Stack
 
@@ -70,6 +70,9 @@ If the API is down, the site still opens, using a snapshot of the catalog. Order
 | `API_URL` | Where the API runs. Default `http://localhost:4000`. Read when the app builds and starts, so set it before `npm run build` on a host. |
 | `NEXT_PUBLIC_SITE_URL` | The public address, for example `https://freyya.example`. Used for the sitemap and share links. Falls back to the Vercel production URL, then to `http://localhost:3000`. |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Optional. When set, the contact page also shows this address as a mail link. |
+| `NEXT_PUBLIC_DEMO_MODE` | `true` on the public demo: shows the demo banner, the sign-in details on the admin login page, and the made-up-details note at checkout. |
+| `PROXY_SECRET` | Shared with the API. `proxy.ts` uses it to pass each visitor's address to the API, which otherwise only sees this storefront's own address. 16+ characters. |
+| `API_BYPASS_TOKEN` | Previews only. The API project's deployment-protection bypass token, so a protected preview of the API can be reached. Never set in production. |
 
 ## How it works
 
@@ -136,7 +139,7 @@ Home scores 98 on desktop. Performance moves by several points between runs, so 
 
 ### Tests
 
-`npm test` runs 243 tests in 18 files. Logic tests run in Node and component tests run in jsdom with Testing Library, with `fetch` mocked. They cover:
+`npm test` runs 263 tests in 20 files. Logic tests run in Node and component tests run in jsdom with Testing Library, with `fetch` mocked. They cover:
 
 - quiz scoring, and the quiz component from the first question to the result
 - shop filtering, sorting and how the choice is read from and written to the URL
@@ -183,11 +186,13 @@ Freyya is a demonstration store.
 
 ## Deploying
 
-The storefront lives in the `Frontend` folder of the repository. It builds and runs **with no API at all**, which is how the public deployment works: pages come from the generated snapshot, and the checkout page says that orders cannot be placed.
+The storefront lives in the `Frontend` folder of the repository, and the public demo runs it on Vercel with **Root Directory** set to `Frontend`. It needs the API for ordering and the admin, but it also builds and runs without one: pages then come from the generated snapshot, and the checkout page says that orders cannot be placed.
 
-1. On Vercel, set **Root Directory** to `Frontend`. That is enough for a working, browsable store. Set `NEXT_PUBLIC_SITE_URL` once you have a domain.
-2. To attach an API, deploy it (see [`../Backend/README.md`](../Backend/README.md)) and set `API_URL` to its address before building. It is read at build time, because it is baked into the `/api/*` rewrite.
-3. On the API, set `CORS_ORIGINS` to the storefront's address, and `TRUST_PROXY=true` if it sits behind a proxy.
+1. Deploy the API first (see [`../Backend/README.md`](../Backend/README.md)).
+2. On Vercel, set `API_URL` to the API's address. It is read when the app builds, because it is baked into the `/api/*` rewrite, so changing it needs a new deployment. Set `PROXY_SECRET` to the same value the API has, and `NEXT_PUBLIC_SITE_URL` once you have a domain.
+3. On the API, set `CORS_ORIGINS` to the storefront's address, and `TRUST_PROXY=true`.
+
+The full walk-through, with every variable and the schedules, is in [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md).
 
 Only `NEXT_PUBLIC_*` values are placed in browser files, and CI proves it by building with fake secrets and searching every file the browser downloads.
 

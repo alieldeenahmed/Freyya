@@ -27,7 +27,7 @@ npm run db:seed
 npm run dev
 ```
 
-**Updating an existing database.** Migrations are additive. After pulling changes, run `npm run db:migrate` again. The latest one (`0001`) adds a column to `orders` that remembers what each idempotency key was first used for. Without it, placing an order fails.
+**Updating an existing database.** Migrations are additive. After pulling changes, run `npm run db:migrate` again. `0001` adds a column to `orders` that remembers what each idempotency key was first used for, and `0002` adds the tables for shared rate limits and the demo marker. Without them, placing an order fails.
 
 The API runs on [http://localhost:4000](http://localhost:4000).
 
@@ -54,6 +54,12 @@ Copy the output into `ADMIN_PASSWORD_HASH`, and set `ADMIN_EMAIL`.
 | `LOW_STOCK_THRESHOLD` | At or below this, an item is flagged as low. Default `5`. |
 | `RATE_LIMIT` | On by default. The end-to-end run sets `false`, so its own sign-ins are not throttled. Leave it on elsewhere. |
 | `TRUST_PROXY` | Set to `true` behind a proxy or load balancer, so rate limits see real client addresses. |
+| `DATABASE_URL_UNPOOLED` | Optional. The direct (non-pooled) connection. Migrations and the seed use it when it is set, because they need a real session. `DATABASE_URL` should then be the pooled one. |
+| `DB_POOL_MAX` | Connections each running instance keeps. Default `5`. Several instances can run at once, so keep it small. |
+| `PROXY_SECRET` | Shared with the storefront, which forwards each visitor's address. The API only believes that address when this secret comes with it. 16+ characters. |
+| `CRON_SECRET` | Lets a scheduler call `/internal/*`, as `Authorization: Bearer <secret>`. 16+ characters. Without it those routes answer `401`. |
+| `DEMO_MODE` | The public demo: caps on abuse and the nightly reset. Off by default. Never turn it on for a database you care about. |
+| `DEMO_MAX_PENDING_ORDERS`, `DEMO_ORDERS_PER_IP_PER_HOUR` | Demo caps. Defaults `8` and `6`. |
 
 ### Scripts
 
@@ -130,6 +136,15 @@ Sign in with `POST /admin/login`. The session is an http-only cookie. Every othe
 | `POST` | `/admin/inventory/:skuId/adjust` | Add or remove stock. Body: `{ "delta", "reason", "note"? }` |
 | `GET` | `/admin/inventory/:skuId/movements` | The history of one item's stock |
 
+### Scheduled jobs
+
+Called by a scheduler, with `Authorization: Bearer <CRON_SECRET>`. With no `CRON_SECRET` configured, or the wrong one, they answer `401`.
+
+| Method | Path | |
+| --- | --- | --- |
+| `GET`, `POST` | `/internal/sweep-reservations` | Gives back stock held by expired unpaid orders, and tidies old rate-limit counters and sessions. Safe to repeat or to run twice at once |
+| `POST` | `/internal/demo-reset` | Resets the public demo to its starting data. Refuses unless `DEMO_MODE` is on **and** the database carries the demo marker row (`app_meta`: `database_role = demo`) |
+
 ## How it works
 
 **Stock can't go negative.** Placing an order locks the rows for the items in it, checks stock, and takes it, all in one transaction. Rows are locked in a fixed order so two overlapping orders can't deadlock. As a last defence the database itself refuses a negative count. Ten people racing for three units get three orders and seven refusals; a test covers it.
@@ -142,7 +157,7 @@ Sign in with `POST /admin/login`. The session is an http-only cookie. Every othe
 
 **Limits are checked on the server.** One order holds at most 10 of any item, counting every line it appears on, so splitting an item across two lines does not get round it. Text that Postgres cannot store, and ids that cannot exist, are refused up front rather than reaching the database.
 
-**Unpaid orders don't hold stock forever, and never block a buyer once they have run out.** An order starts as `pending_payment` and holds its stock for `RESERVATION_MINUTES`. A sweep every minute cancels expired ones and returns the stock. Placing an order also releases any hold that has run out before it checks stock, so nobody is turned away because the sweep has not come round yet. Paying after the hold has run out fails cleanly, and a payment and a sweep arriving together release the stock once.
+**Unpaid orders don't hold stock forever, and never block a buyer once they have run out.** An order starts as `pending_payment` and holds its stock for `RESERVATION_MINUTES`. Nothing runs in the background, because a serverless instance can be frozen or discarded between requests. Expired holds are released three ways: when an order is placed, when the catalog is read, and by a scheduled call to `/internal/sweep-reservations`. Placing an order releases any hold that has run out before it checks stock, so nobody is turned away because the scheduled sweep has not come round yet. Paying after the hold has run out fails cleanly, and a payment and a sweep arriving together release the stock once.
 
 **Order status has rules.** `pending_payment → paid → shipped → delivered`. Cancelling is allowed before shipping and returns the stock. A refund is allowed after shipping and doesn't, because the goods may not be resellable. `cancelled` and `refunded` are final. The rules are one table in `src/domain/order-status.ts`, and a test checks all 36 pairs of statuses against the API. Only the admin can change a status: customers have no route that does, and a status or timestamp sent in a request body is ignored. Every change locks the order's row first, so two admins pressing at once cannot both win.
 
@@ -157,19 +172,20 @@ Sign in with `POST /admin/login`. The session is an http-only cookie. Every othe
 - Admin responses and order lookups are sent with `Cache-Control: no-store`.
 - Request logs drop the query string, because an order lookup carries the customer's email in it.
 - Configuration errors name the setting that is wrong and never repeat its value.
-- One weakness is known and left alone: the password hash uses scrypt with Node's default cost. That is fine for one admin behind a rate limit, but a shared or public deployment should raise it.
+- One weakness is known and left alone: the password hash uses scrypt with Node's default cost. That is fine for one admin behind a rate limit, but a shared deployment should raise it.
 
 **Customers can't probe for orders.** Looking one up needs the number and the email, and a wrong number and a wrong email give the same `404`. Lookups are rate limited.
 
 ## Tests
 
-`npm test` runs 249 tests in 9 files, against a real database:
+`npm test` runs 304 tests in 10 files, against a real database:
 
 | File | What is checked |
 | --- | --- |
 | `orders`, `catalog`, `pricing`, `auth`, `admin` | Ordering, pricing, stock, expiry, sign-in, sessions, order transitions and stock adjustments |
 | `concurrency` | Buyers against buyers, buyers against admin adjustments, orders against the expiry sweep, payments against cancellations, ten identical requests at once, one key with two different orders, and dozens of malformed inputs. After every race, each item's stock must equal the sum of its ledger and never be below zero |
 | `order-state-machine` | All 36 status pairs through the API, the effect of each on stock, and every way a customer might try to change a status |
+| `serverless` | What a serverless host needs: holds that expire with no background process, time taken from the database and not the process, limits shared by every instance, the address a request is counted against, the origin check, the demo caps, the nightly reset and its refusals, and a guard that keeps the tests away from the demo database |
 | `security` | Every route is open or protected on purpose, cookie flags, origin checks, sign-in limits, `no-store` on personal data, hostile ids and NUL characters, and nothing from the environment in any response |
 | `contract` | The storefront's generated snapshot matches this package's files exactly |
 
@@ -181,7 +197,7 @@ The database tests wipe their tables, so they run against a separate database. P
 TEST_DATABASE_URL=postgresql://...
 ```
 
-With Neon, a branch of the project is ideal. The tests refuse to run if `TEST_DATABASE_URL` matches `DATABASE_URL`. The database needs its tables first, so run `npm run db:migrate` against it once (with `DATABASE_URL` pointing at it for that command).
+With Neon, a branch of the project is ideal. The tests refuse to run if `TEST_DATABASE_URL` matches `DATABASE_URL`, if its host is the one in `DEMO_DATABASE_HOST` (when set), or if the database carries the demo marker row. The database needs its tables first, so run `npm run db:migrate` against it once (with `DATABASE_URL` pointing at it for that command).
 
 The storefront's end-to-end tests also use this database. See [`../Frontend/README.md`](../Frontend/README.md#tests).
 
@@ -189,8 +205,8 @@ The storefront's end-to-end tests also use this database. See [`../Frontend/READ
 
 ```
 src/
-  app.ts          Builds the Fastify app: security headers, CORS, rate limits, errors
-  server.ts       Starts it, and runs the reservation sweep
+  create-app.ts   Configures a Fastify app: security headers, CORS, rate limits, errors, routes
+  server.ts       The entrypoint: creates the app, configures it and listens. Vercel runs this file too
   config.ts       Reads and checks environment variables
   schemas.ts      Request validation
   views.ts        The shapes the API returns
@@ -206,6 +222,8 @@ scripts/          Admin password helper
 ## Deploying
 
 Any host that runs Node works. Set the environment variables above, run `npm run build`, run `npm run db:migrate` against the production database, then `npm start`. Behind a proxy, set `TRUST_PROXY=true`.
+
+The public demo runs this package on Vercel as a second project whose Root Directory is `Backend`. Vercel finds `src/server.ts` by name, and requires that the file itself creates the Fastify instance and calls `listen()` before anything is awaited, which is why it is written that way. Migrations are never run by the Vercel build. The whole setup, including the environment variables and the schedules, is in [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md).
 
 ## License
 
