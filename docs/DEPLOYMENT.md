@@ -107,14 +107,13 @@ Repository secrets, used by the workflows in `.github/workflows`:
 | `API_BASE_URL` | sweep, demo reset | the API's production address, with no trailing slash |
 | `CRON_SECRET` | sweep, demo reset | the same value as in the API project |
 | `DATABASE_URL_UNPOOLED` | migrate | the direct connection to the demo database |
-| `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD` | smoke test | the published demo login |
 
 | Workflow | When | What it does |
 | --- | --- | --- |
-| `sweep.yml` | every 5 minutes, or by hand | `POST /internal/sweep-reservations` |
+| `sweep.yml` | scheduled every 5 minutes (best effort, see below), or by hand | `POST /internal/sweep-reservations` |
 | `demo-reset.yml` | 03:00 UTC daily, or by hand | `POST /internal/demo-reset` |
 | `migrate-demo-db.yml` | by hand only | runs `npm run db:migrate` against the direct connection |
-| `smoke.yml` | after a successful **production** deployment of the storefront (Vercel names the environment `Production – freyya`, so the workflow matches on the prefix), or by hand | runs `Frontend/e2e-live` against the live demo |
+| `smoke.yml` | after a successful **production** deployment of the storefront (Vercel names the environment `Production – freyya`, so the workflow matches on the prefix), or by hand | runs `Frontend/e2e-live`, a read-only Playwright project, against the live demo. It needs no secret: it reads the published demo login from `README.md`, waits for `/api/health` to answer, and fails the run with a message if the site does not |
 | `ci.yml` | every push and pull request | lint, types, unit and integration tests, build, end-to-end |
 
 GitHub only runs a workflow's schedule from the default branch, and `workflow_dispatch` needs the workflow file to exist there, so the schedules and the manual runs start working once the branch is merged.
@@ -122,7 +121,7 @@ GitHub only runs a workflow's schedule from the default branch, and `workflow_di
 ## Schedules, and the limits of the free tier
 
 - **Vercel Cron on Hobby runs at most once a day**, at hourly precision, and only for production deployments. `Backend/vercel.json` uses it as a daily backstop (`0 4 * * *`, a `GET` with `Authorization: Bearer $CRON_SECRET`).
-- **GitHub Actions does the frequent sweep.** Scheduled workflows are best-effort: runs can start late, and GitHub disables scheduled workflows in a repository with no activity for 60 days. The design does not depend on the sweep for correctness. Holds are also released when an order is placed and when the catalog is read, so a late sweep delays nothing a visitor can see.
+- **GitHub Actions does the frequent sweep.** Scheduled workflows are best-effort: GitHub treats `*/5 * * * *` as a request, not a promise. In the first six hours after the merge (24 Oct 2026) it started the sweep twice on its own, at 18:22 and 21:00 UTC. GitHub can also disable scheduled workflows in a repository with no activity for 60 days. The design does not depend on the sweep for correctness. Holds are also released when an order is placed and when the catalog is read, so a late sweep delays nothing a visitor can see.
 - **Runtime logs on Hobby are kept for about 30 minutes.** Read them with `vercel logs --project freyya-api` soon after an incident.
 - **Functions** run under Fluid compute with the default limits. The pool stays small for that reason.
 
