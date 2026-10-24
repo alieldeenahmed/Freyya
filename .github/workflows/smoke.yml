@@ -2,9 +2,13 @@ name: Smoke test the live demo
 
 # A short, read-only check of the deployed site: the storefront answers, its products come from
 # the API and not the fallback snapshot, checkout and the admin sign-in page load, and the demo
-# admin can sign in. It places no orders and changes nothing.
+# admin can sign in. It places no orders and changes no data.
 #
-# Runs when Vercel reports a successful production deployment, and by hand.
+# It needs no repository secret. The demo login is published in the README on purpose, so the
+# job reads it from there instead of keeping a second copy.
+#
+# Runs when Vercel reports a successful production deployment of the storefront, and by hand.
+# A deployment that only changes the API does not rebuild the storefront, so it does not run this.
 on:
   deployment_status:
   workflow_dispatch:
@@ -38,11 +42,31 @@ jobs:
           cache-dependency-path: Frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Wait for the live site to answer
+        env:
+          LIVE_URL: ${{ inputs.url || 'https://freyya.vercel.app' }}
+        run: |
+          if ! curl --fail --silent --show-error --output /dev/null \
+            --retry 6 --retry-delay 10 --retry-all-errors --max-time 30 \
+            "$LIVE_URL/api/health"; then
+            echo "::error::The live site did not answer $LIVE_URL/api/health. Is the demo down?"
+            exit 1
+          fi
+      - name: Read the demo login the README publishes
+        working-directory: .
+        run: |
+          email=$(sed -n 's/^| Email | `\(.*\)` |$/\1/p' README.md)
+          password=$(sed -n 's/^| Password | `\(.*\)` |$/\1/p' README.md)
+          if [ -z "$email" ] || [ -z "$password" ]; then
+            echo "::error::Could not find the demo login table in README.md"
+            exit 1
+          fi
+          echo "::add-mask::$password"
+          echo "DEMO_ADMIN_EMAIL=$email" >> "$GITHUB_ENV"
+          echo "DEMO_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
       - name: Run the smoke tests
         env:
           LIVE_URL: ${{ inputs.url || 'https://freyya.vercel.app' }}
-          DEMO_ADMIN_EMAIL: ${{ secrets.DEMO_ADMIN_EMAIL }}
-          DEMO_ADMIN_PASSWORD: ${{ secrets.DEMO_ADMIN_PASSWORD }}
         run: npx playwright test --config playwright.live.config.ts
       - name: Keep the report when something fails
         if: failure()

@@ -15,12 +15,18 @@ The whole stack is deployed, not just the storefront: the Next.js storefront and
 | Email | `admin@demo.freyya.example` |
 | Password | `ulKia9jzNW88rr4uyOGS` |
 
+**Try it in 60 seconds**
+
+1. Open the [shop](https://freyya.vercel.app/shop), pick a product, press **Add to bag**, then open the bag and choose **Checkout**. Fill in made-up details (any name, an `@example.com` email, any address), choose a country and press **Place order**. The confirmation shows your order number, like `FRY-XXXXXXX`.
+2. Go to [/admin](https://freyya.vercel.app/admin) and sign in with the login above.
+3. Open **Orders**, type your order number into **Search**, open the order and press **Mark as shipped**. The stock for what you bought has already dropped on **Inventory**.
+
 It is a public demo, so keep these in mind:
 
-- **Everything resets every night** (03:00 UTC): orders, stock, sessions. Other visitors share the same data and may change it while you look.
+- **Everything resets every night** (scheduled for 03:00 UTC, though GitHub can start scheduled jobs late): orders, stock, sessions. Other visitors share the same data and may change it while you look.
 - **Use made-up details at checkout.** Payment is simulated and nothing is shipped or emailed, but orders are real rows in a real database.
 - **There are caps against abuse:** at most 6 orders an hour per address, and at most 8 unpaid orders at once, so the twelve items cannot all be held in one burst. Rate limits are shared across all server instances.
-- **The first request after a quiet spell is slower** (free tier).
+- **The first request after a quiet spell can be slower** (free tier).
 
 How it is put together, including the free-tier limits, is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). If the API is ever unreachable, the storefront falls back to a generated static snapshot of the catalog so pages stay browsable, and checkout says plainly that it cannot place orders.
 
@@ -114,7 +120,7 @@ flowchart LR
   Browser -->|"/api/* same-origin"| Web["Storefront on Vercel\nNext.js, rewrites /api/*"]
   Web -->|"visitor address + shared secret"| API["API on Vercel\nFastify"]
   API -->|"pooled connection\nSELECT ... FOR UPDATE in one transaction"| DB[("Neon Postgres")]
-  GH["GitHub Actions\nsweep every 5 min, reset nightly"] -->|"Bearer secret"| API
+  GH["GitHub Actions\nscheduled sweep, nightly reset"] -->|"Bearer secret"| API
   Web -.->|"API unreachable"| Snapshot["generated catalog snapshot\n(static fallback)"]
 ```
 
@@ -168,7 +174,7 @@ sequenceDiagram
 
 ## Testing
 
-Three layers, all run in CI on every push and pull request: **263 storefront tests** (Vitest/Testing Library), **304 API tests** (Vitest, against a real Postgres database), and **111 end-to-end tests** (Playwright, desktop and mobile viewports, against a production build and the real API). A fourth, read-only Playwright project (`Frontend/e2e-live`) checks the deployed demo and runs after every production deployment.
+Three layers, all run in CI on every push and pull request: **263 storefront tests** (Vitest/Testing Library), **304 API tests** (Vitest, against a real Postgres database), and **111 end-to-end tests** (Playwright, desktop and mobile viewports, against a production build and the real API). A fourth, read-only Playwright project (`Frontend/e2e-live`) checks the deployed demo. It needs no secret, and it runs after each production deployment of the storefront and by hand from the Actions tab (a deployment that only changes the API does not trigger it).
 
 The API test suite is organized around correctness, not just coverage:
 
@@ -272,7 +278,7 @@ Stated plainly, not hidden:
 
 - **Payment is simulated.** No real payment processor is integrated; no card data is collected, transmitted, or stored anywhere in the system.
 - **The public demo is a shared, public sandbox.** Its admin login is published, all visitors see the same data, and it resets every night. It limits each address to 6 orders an hour and the whole demo to 8 unpaid orders at once. Visitors behind one shared address (an office, a mobile carrier) share those counters.
-- **It runs on free tiers.** The first request after a quiet period is slower. Vercel's free cron runs once a day, so the frequent stock-hold sweep is a GitHub Actions schedule, which can start late. Nothing relies on it for correctness (holds are also released when orders are placed and when the catalog is read), but a late sweep means an expired hold can linger until then. Runtime logs on the free plan are kept for about 30 minutes.
+- **It runs on free tiers.** The first request after a quiet period can be slower. Vercel's free cron runs once a day, so the frequent stock-hold sweep is a GitHub Actions schedule set to every 5 minutes, which GitHub treats as best effort: in the first six hours after the merge it ran twice by itself. Nothing relies on it for correctness (holds are also released when orders are placed and when the catalog is read), but a late sweep means an expired hold can linger until then. Runtime logs on the free plan are kept for about 30 minutes.
 - **Single admin account,** configured via environment variables. There is no multi-user admin identity system, and no customer accounts.
 - **The frontend keeps a generated copy of the catalog and pricing rules** as a static fallback for when the API is unreachable. It's produced from the API's own source data by a script and checked for staleness in CI, but it is still a second copy that has to be regenerated deliberately when the source changes.
 - **No manual screen-reader testing has been performed.** Automated accessibility scans (axe) and accessibility-tree/focus assertions are part of the test suite, but they are not a substitute for a human pass with a screen reader.
