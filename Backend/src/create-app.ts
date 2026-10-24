@@ -51,13 +51,27 @@ export function serializeRequest(request: { method?: string; url?: string; ip?: 
   };
 }
 
-export async function buildApp(options: BuildOptions): Promise<FastifyInstance> {
-  const { config, db } = options;
-
-  const app = Fastify({
-    logger: options.logger ? { serializers: { req: serializeRequest } } : false,
+// The options the Fastify instance is created with. Vercel finds the API by looking for a
+// file that imports fastify and creates the instance, so src/server.ts does that itself and
+// uses this for its settings, and the tests go through buildApp below.
+export function fastifyOptions(config: Config, logger = false) {
+  return {
+    logger: logger ? { serializers: { req: serializeRequest } } : false,
     trustProxy: config.TRUST_PROXY,
-  });
+  };
+}
+
+export async function buildApp(options: BuildOptions): Promise<FastifyInstance> {
+  const app = Fastify(fastifyOptions(options.config, options.logger));
+  return configureApp(app, options);
+}
+
+// Adds everything to an instance that already exists.
+export async function configureApp(
+  app: FastifyInstance,
+  options: BuildOptions
+): Promise<FastifyInstance> {
+  const { config, db } = options;
 
   app.decorate("ctx", {
     config,
