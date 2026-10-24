@@ -3,6 +3,10 @@ import type { Product } from "@/lib/types";
 
 export const API_URL = (process.env.API_URL ?? "http://localhost:4000").replace(/\/$/, "");
 
+// Only set on previews, where the API is behind deployment protection. See proxy.ts.
+export const apiBypassHeaders = (): Record<string, string> =>
+  process.env.API_BYPASS_TOKEN ? { "x-vercel-protection-bypass": process.env.API_BYPASS_TOKEN } : {};
+
 // Stock changes with every order, so the catalog is refreshed often. A shopper who sees
 // a slightly old count is still protected: checkout checks stock again on the server.
 const REVALIDATE_SECONDS = 30;
@@ -35,6 +39,7 @@ export interface CatalogState {
 export async function getCatalogState(): Promise<CatalogState> {
   try {
     const res = await fetch(`${API_URL}/products`, {
+      headers: apiBypassHeaders(),
       next: { revalidate: REVALIDATE_SECONDS, tags: ["catalog"] },
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });

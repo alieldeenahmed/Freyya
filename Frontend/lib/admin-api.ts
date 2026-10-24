@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { toApiError } from "@/lib/api";
-import { API_URL } from "@/lib/catalog";
+import { API_URL, apiBypassHeaders } from "@/lib/catalog";
 
 export const ADMIN_COOKIE = "freyya_admin";
 
@@ -15,7 +15,7 @@ export async function adminFetch<T>(path: string): Promise<T> {
   if (!token) redirect("/admin/login");
 
   const res = await fetch(`${API_URL}/admin${path}`, {
-    headers: { cookie: `${ADMIN_COOKIE}=${token}` },
+    headers: { cookie: `${ADMIN_COOKIE}=${token}`, ...apiBypassHeaders() },
     cache: "no-store",
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
@@ -37,7 +37,7 @@ export async function currentAdmin(): Promise<{ email: string } | null> {
 
   try {
     const res = await fetch(`${API_URL}/admin/me`, {
-      headers: { cookie: `${ADMIN_COOKIE}=${token}` },
+      headers: { cookie: `${ADMIN_COOKIE}=${token}`, ...apiBypassHeaders() },
       cache: "no-store",
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
