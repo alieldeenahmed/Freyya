@@ -114,7 +114,7 @@ Repository secrets, used by the workflows in `.github/workflows`:
 | `sweep.yml` | every 5 minutes, or by hand | `POST /internal/sweep-reservations` |
 | `demo-reset.yml` | 03:00 UTC daily, or by hand | `POST /internal/demo-reset` |
 | `migrate-demo-db.yml` | by hand only | runs `npm run db:migrate` against the direct connection |
-| `smoke.yml` | after a successful **production** deployment, or by hand | runs `Frontend/e2e-live` against the live demo |
+| `smoke.yml` | after a successful **production** deployment of the storefront (Vercel names the environment `Production – freyya`, so the workflow matches on the prefix), or by hand | runs `Frontend/e2e-live` against the live demo |
 | `ci.yml` | every push and pull request | lint, types, unit and integration tests, build, end-to-end |
 
 GitHub only runs a workflow's schedule from the default branch, and `workflow_dispatch` needs the workflow file to exist there, so the schedules and the manual runs start working once the branch is merged.
